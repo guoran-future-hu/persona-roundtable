@@ -1,0 +1,55 @@
+{
+  "topic": "Do AI have consciousness",
+  "context": "There are different definition of cousciousness, it is under active debate in cog sci. ther are prob multiple angles to approach this question, most inportantly how do you define consciousness, its component or function",
+  "testMode": false,
+  "workingLanguage": "chinese",
+  "moderatorProvider": "deepseek",
+  "providers": {
+    "deepseek": {
+      "type": "deepseek",
+      "model": "deepseek-v4-flash",
+      "apiKeyEnv": "DEEPSEEK_API_KEY",
+      "reasoningEffort": "high"
+    },
+    "openai": {
+      "type": "openai",
+      "model": "gpt-5.5",
+      "apiKeyEnv": "OPENAI_API_KEY"
+    },
+    "claude": {
+      "type": "anthropic",
+      "model": "claude-sonnet-4-5",
+      "apiKeyEnv": "ANTHROPIC_API_KEY"
+    }
+  },
+  "minds": [    
+    {
+      "id": "feynman",
+      "name": "Richard Feynman",
+      "personaPath": "agents/feynman/SKILL.md",
+      "provider": "deepseek"
+    },
+    {
+      "id": "karpathy",
+      "name": "Andrej Karpathy",
+      "personaPath": "agents/andrej-karpathy/SKILL.md",
+      "provider": "deepseek"
+    },
+    {
+      "id": "naval",
+      "name": "Naval",
+      "personaPath": "agents/naval/SKILL.md",
+      "provider": "deepseek"
+    },
+    {
+      "id": "paul-graham",
+      "name": "Paul Graham",
+      "personaPath": "agents/paul-graham/SKILL.md",
+      "provider": "deepseek"
+    }
+
+  ],
+  "disabledMinds": [
+
+  ]
+}
