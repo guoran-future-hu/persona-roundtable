@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ChatMessage } from "./models/types";
+import { readUtf8TextSync } from "./text-io";
 
 export interface PromptTemplate {
   system: string;
@@ -35,7 +35,7 @@ export function parsePromptTemplate(source: string): PromptTemplate {
 }
 
 function loadPromptTemplate(path: string): PromptTemplate {
-  return parsePromptTemplate(readFileSync(resolve(path), "utf8"));
+  return parsePromptTemplate(readUtf8TextSync(resolve(path)));
 }
 
 function renderString(template: string, variables: Record<string, string>): string {

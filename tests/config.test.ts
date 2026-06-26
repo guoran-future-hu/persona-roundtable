@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
-import { parseSessionConfig } from "../config";
+import { loadSessionConfig, parseSessionConfig } from "../config";
 
 test("parseSessionConfig loads topic, context, providers, and minds", () => {
   const config = parseSessionConfig({
@@ -15,16 +18,12 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
     },
     minds: [
       {
-        id: "naval",
-        name: "Naval",
         personaPath: "agents/naval-perspective/SKILL.md",
         provider: "openai",
       },
     ],
     disabledMinds: [
       {
-        id: "feynman",
-        name: "Richard Feynman",
         personaPath: "agents/feynman-perspective/SKILL.md",
         provider: "deepseek",
       },
@@ -37,8 +36,39 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
   assert.equal(config.workingLanguage, "Use English.");
   assert.equal(config.providers.openai.type, "openai");
   assert.equal(config.providers.deepseek.reasoningEffort, "max");
+  assert.equal(config.minds[0]?.personaPath, "agents/naval-perspective/SKILL.md");
+  assert.equal(config.disabledMinds?.[0]?.personaPath, "agents/feynman-perspective/SKILL.md");
+});
+
+test("loadSessionConfig resolves mind identity from persona folder metadata", async () => {
+  const configDir = await mkdtemp(join(tmpdir(), "persona-roundtable-config-"));
+  const personaDir = join(configDir, "agents", "naval");
+  await mkdir(personaDir, { recursive: true });
+  await writeFile(join(personaDir, "SKILL.md"), "persona", "utf8");
+  await writeFile(join(personaDir, "persona.json"), JSON.stringify({ id: "naval", name: "Naval" }), "utf8");
+  await writeFile(
+    join(configDir, "config.json"),
+    JSON.stringify({
+      topic: "A question",
+      context: "rich context",
+      moderatorProvider: "openai",
+      providers: {
+        openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+      },
+      minds: [
+        {
+          personaPath: "agents/naval/SKILL.md",
+          provider: "openai",
+        },
+      ],
+    }),
+    "utf8",
+  );
+
+  const config = await loadSessionConfig(join(configDir, "config.json"));
+
+  assert.equal(config.minds[0]?.id, "naval");
   assert.equal(config.minds[0]?.name, "Naval");
-  assert.equal(config.disabledMinds?.[0]?.name, "Richard Feynman");
 });
 
 test("parseSessionConfig defaults testMode to false", () => {
@@ -51,8 +81,6 @@ test("parseSessionConfig defaults testMode to false", () => {
     },
     minds: [
       {
-        id: "naval",
-        name: "Naval",
         personaPath: "agents/naval-perspective/SKILL.md",
         provider: "openai",
       },
@@ -72,8 +100,6 @@ test("parseSessionConfig allows empty disabledMinds", () => {
     },
     minds: [
       {
-        id: "naval",
-        name: "Naval",
         personaPath: "agents/naval-perspective/SKILL.md",
         provider: "openai",
       },
@@ -99,7 +125,7 @@ test("parseSessionConfig rejects unsupported reasoning effort values", () => {
             reasoningEffort: "medium",
           },
         },
-        minds: [{ id: "x", name: "X", personaPath: "x.md", provider: "deepseek" }],
+        minds: [{ personaPath: "x.md", provider: "deepseek" }],
       }),
     /reasoningEffort must be 'high' or 'max'/,
   );
@@ -115,7 +141,7 @@ test("parseSessionConfig rejects unknown mind provider", () => {
         providers: {
           openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
         },
-        minds: [{ id: "x", name: "X", personaPath: "x.md", provider: "missing" }],
+        minds: [{ personaPath: "x.md", provider: "missing" }],
       }),
     /unknown provider/,
   );

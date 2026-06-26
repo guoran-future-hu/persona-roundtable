@@ -1,8 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { MindConfig, SessionConfig } from "./config";
 import type { ModelCallLog, RoundOutput, SessionResult } from "./orchestrator";
 import { serializeContext } from "./orchestrator";
+import { writeUtf8Text } from "./text-io";
 
 export interface SavedSessionPaths {
   transcriptPath: string;
@@ -21,8 +22,8 @@ export async function saveTranscript(
   const transcriptPath = resolve(outputDir, `${baseName}.md`);
   const devLogPath = resolve(outputDir, `${baseName}.dev.md`);
 
-  await writeFile(transcriptPath, renderTranscript(config, result, createdAt), "utf8");
-  await writeFile(devLogPath, renderDevLog(config, result, createdAt), "utf8");
+  await writeUtf8Text(transcriptPath, renderTranscript(config, result, createdAt));
+  await writeUtf8Text(devLogPath, renderDevLog(config, result, createdAt));
 
   return { transcriptPath, devLogPath };
 }

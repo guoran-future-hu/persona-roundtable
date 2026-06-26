@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { readUtf8Text } from "./text-io";
 
 export type ProviderType = "openai" | "anthropic" | "deepseek";
 
@@ -17,6 +17,11 @@ export interface MindConfig {
   provider: string;
 }
 
+export interface MindReferenceConfig {
+  personaPath: string;
+  provider: string;
+}
+
 export interface SessionConfig {
   topic: string;
   context: unknown;
@@ -28,6 +33,11 @@ export interface SessionConfig {
   disabledMinds?: MindConfig[];
 }
 
+export interface ParsedSessionConfig extends Omit<SessionConfig, "minds" | "disabledMinds"> {
+  minds: MindReferenceConfig[];
+  disabledMinds?: MindReferenceConfig[];
+}
+
 export interface LoadedSessionConfig extends SessionConfig {
   configPath: string;
   configDir: string;
@@ -35,18 +45,24 @@ export interface LoadedSessionConfig extends SessionConfig {
 
 export async function loadSessionConfig(configPath: string): Promise<LoadedSessionConfig> {
   const absolutePath = resolve(configPath);
-  const raw = await readFile(absolutePath, "utf8");
+  const raw = await readUtf8Text(absolutePath);
   const parsed = JSON.parse(raw) as unknown;
   const config = parseSessionConfig(parsed);
+  const configDir = dirname(absolutePath);
+  const minds = await loadMindConfigs(config.minds, configDir, "minds");
+  const disabledMinds =
+    config.disabledMinds === undefined ? undefined : await loadMindConfigs(config.disabledMinds, configDir, "disabledMinds");
 
   return {
     ...config,
+    minds,
+    disabledMinds,
     configPath: absolutePath,
-    configDir: dirname(absolutePath),
+    configDir,
   };
 }
 
-export function parseSessionConfig(value: unknown): SessionConfig {
+export function parseSessionConfig(value: unknown): ParsedSessionConfig {
   const config = expectRecord(value, "session config");
 
   const topic = expectString(config.topic, "topic");
@@ -69,13 +85,13 @@ export function parseSessionConfig(value: unknown): SessionConfig {
 
   for (const mind of minds) {
     if (!providers[mind.provider]) {
-      throw new Error(`mind '${mind.id}' references unknown provider '${mind.provider}'`);
+      throw new Error(`mind '${mind.personaPath}' references unknown provider '${mind.provider}'`);
     }
   }
 
   for (const mind of disabledMinds ?? []) {
     if (!providers[mind.provider]) {
-      throw new Error(`disabled mind '${mind.id}' references unknown provider '${mind.provider}'`);
+      throw new Error(`disabled mind '${mind.personaPath}' references unknown provider '${mind.provider}'`);
     }
   }
 
@@ -130,7 +146,31 @@ function parseReasoningEffort(value: unknown, label: string): "high" | "max" | u
   throw new Error(`${label} must be 'high' or 'max'`);
 }
 
-function parseMinds(value: unknown, label = "minds", options: { allowEmpty?: boolean } = {}): MindConfig[] {
+async function loadMindConfigs(minds: MindReferenceConfig[], configDir: string, label: string): Promise<MindConfig[]> {
+  return Promise.all(
+    minds.map(async (mind, index) => {
+      const personaPath = resolve(configDir, mind.personaPath);
+      const metadataPath = resolve(dirname(personaPath), "persona.json");
+      const metadata = parsePersonaMetadata(JSON.parse(await readUtf8Text(metadataPath)) as unknown, `${label}[${index}] metadata`);
+
+      return {
+        ...mind,
+        ...metadata,
+      };
+    }),
+  );
+}
+
+function parsePersonaMetadata(value: unknown, label: string): Pick<MindConfig, "id" | "name"> {
+  const metadata = expectRecord(value, label);
+
+  return {
+    id: expectString(metadata.id, `${label}.id`),
+    name: expectString(metadata.name, `${label}.name`),
+  };
+}
+
+function parseMinds(value: unknown, label = "minds", options: { allowEmpty?: boolean } = {}): MindReferenceConfig[] {
   if (!Array.isArray(value) || (!options.allowEmpty && value.length === 0)) {
     throw new Error(`${label} must be a non-empty array`);
   }
@@ -139,8 +179,6 @@ function parseMinds(value: unknown, label = "minds", options: { allowEmpty?: boo
     const mind = expectRecord(mindValue, `${label}[${index}]`);
 
     return {
-      id: expectString(mind.id, `${label}[${index}].id`),
-      name: expectString(mind.name, `${label}[${index}].name`),
       personaPath: expectString(mind.personaPath, `${label}[${index}].personaPath`),
       provider: expectString(mind.provider, `${label}[${index}].provider`),
     };

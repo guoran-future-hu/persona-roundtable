@@ -1,7 +1,7 @@
-import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { LoadedSessionConfig, MindConfig } from "./config";
 import type { ChatModel } from "./models/types";
+import { readUtf8Text } from "./text-io";
 
 export interface LoadedMind extends MindConfig {
   persona: string;
@@ -15,7 +15,7 @@ export async function loadMinds(
   return Promise.all(
     config.minds.map(async (mind) => {
       const personaPath = resolve(config.configDir, mind.personaPath);
-      const personaSource = await readFile(personaPath, "utf8");
+      const personaSource = await readUtf8Text(personaPath);
       const persona = config.testMode ? `[${mind.id}, persona]` : personaSource;
       const model = modelsByProvider[mind.provider];
 

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "roundtable": "tsx app.ts",
+    "check:encoding": "tsx scripts/check-encoding.ts",
     "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

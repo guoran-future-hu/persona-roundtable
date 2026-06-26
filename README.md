@@ -75,6 +75,24 @@ npm run roundtable -- --config path/to/config.json
 - `minds`: the personas participating in this session
 - `disabledMinds`: optional parking lot for personas you want to keep in the JSON but not run
 
+Each mind entry only needs:
+
+```json
+{
+  "personaPath": "agents/feynman/SKILL.md",
+  "provider": "deepseek"
+}
+```
+
+The persona folder must include `persona.json` beside `SKILL.md`:
+
+```json
+{
+  "id": "feynman",
+  "name": "Richard Feynman"
+}
+```
+
 Change the JSON for every new session. There is no cross-session memory in the MVP.
 
 Each run writes two files under `sessions/`:

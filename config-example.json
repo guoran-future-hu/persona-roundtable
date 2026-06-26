@@ -5,7 +5,7 @@
   "workingLanguage": "chinese",
   "moderatorProvider": "deepseek",
   "providers": {
-    "deepseek": {
+    "deepseek-flash": {
       "type": "deepseek",
       "model": "deepseek-v4-flash",
       "apiKeyEnv": "DEEPSEEK_API_KEY",
@@ -24,26 +24,18 @@
   },
   "minds": [    
     {
-      "id": "feynman",
-      "name": "Richard Feynman",
       "personaPath": "agents/feynman/SKILL.md",
       "provider": "deepseek"
     },
     {
-      "id": "karpathy",
-      "name": "Andrej Karpathy",
       "personaPath": "agents/andrej-karpathy/SKILL.md",
       "provider": "deepseek"
     },
     {
-      "id": "naval",
-      "name": "Naval",
       "personaPath": "agents/naval/SKILL.md",
       "provider": "deepseek"
     },
     {
-      "id": "paul-graham",
-      "name": "Paul Graham",
       "personaPath": "agents/paul-graham/SKILL.md",
       "provider": "deepseek"
     }
