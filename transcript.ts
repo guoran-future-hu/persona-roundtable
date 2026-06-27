@@ -83,6 +83,7 @@ export function renderDevLog(config: SessionConfig, result: SessionResult, creat
         context: config.context,
         testMode: config.testMode,
         workingLanguage: config.workingLanguage,
+        globalMindsProvider: config.globalMindsProvider,
         moderatorProvider: config.moderatorProvider,
         compressionProvider: config.compressionProvider,
         minds: config.minds,

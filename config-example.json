@@ -3,6 +3,7 @@
   "context": "There are different definition of cousciousness, it is under active debate in cog sci. ther are prob multiple angles to approach this question, most inportantly how do you define consciousness, its component or function",
   "testMode": false,
   "workingLanguage": "chinese",
+  "globalMindsProvider": "deepseek-pro",
   "moderatorProvider": "deepseek-pro",
   "compressionProvider": "deepseek-flash",
   "providers": {
@@ -31,20 +32,16 @@
   },
   "minds": [    
     {
-      "personaPath": "agents/feynman/SKILL.md",
-      "provider": "deepseek-pro"
+      "personaPath": "agents/feynman/SKILL.md"
     },
     {
-      "personaPath": "agents/andrej-karpathy/SKILL.md",
-      "provider": "deepseek-pro"
+      "personaPath": "agents/andrej-karpathy/SKILL.md"
     },
     {
-      "personaPath": "agents/naval/SKILL.md",
-      "provider": "deepseek-pro"
+      "personaPath": "agents/naval/SKILL.md"
     },
     {
-      "personaPath": "agents/paul-graham/SKILL.md",
-      "provider": "deepseek-pro"
+      "personaPath": "agents/paul-graham/SKILL.md"
     }
 
   ],

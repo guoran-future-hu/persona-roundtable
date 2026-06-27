@@ -27,6 +27,7 @@ export interface SessionConfig {
   context: unknown;
   testMode: boolean;
   workingLanguage?: string;
+  globalMindsProvider?: string;
   moderatorProvider: string;
   compressionProvider?: string;
   providers: Record<string, ProviderConfig>;
@@ -74,12 +75,19 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
   const workingLanguage =
     config.workingLanguage === undefined ? undefined : expectString(config.workingLanguage, "workingLanguage");
 
+  const globalMindsProvider = parseOptionalProvider(config.globalMindsProvider, "globalMindsProvider");
   const moderatorProvider = expectString(config.moderatorProvider, "moderatorProvider");
   const compressionProvider = parseOptionalProvider(config.compressionProvider, "compressionProvider");
   const providers = parseProviders(config.providers);
-  const minds = parseMinds(config.minds);
+  const minds = parseMinds(config.minds, "minds", { defaultProvider: globalMindsProvider });
   const disabledMinds =
-    config.disabledMinds === undefined ? undefined : parseMinds(config.disabledMinds, "disabledMinds", { allowEmpty: true });
+    config.disabledMinds === undefined
+      ? undefined
+      : parseMinds(config.disabledMinds, "disabledMinds", { allowEmpty: true, defaultProvider: globalMindsProvider });
+
+  if (globalMindsProvider !== undefined && !providers[globalMindsProvider]) {
+    throw new Error(`globalMindsProvider '${globalMindsProvider}' is not defined in providers`);
+  }
 
   if (!providers[moderatorProvider]) {
     throw new Error(`moderatorProvider '${moderatorProvider}' is not defined in providers`);
@@ -106,6 +114,7 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     context: config.context,
     testMode,
     workingLanguage,
+    globalMindsProvider,
     moderatorProvider,
     compressionProvider,
     providers,
@@ -185,7 +194,11 @@ function parsePersonaMetadata(value: unknown, label: string): Pick<MindConfig, "
   };
 }
 
-function parseMinds(value: unknown, label = "minds", options: { allowEmpty?: boolean } = {}): MindReferenceConfig[] {
+function parseMinds(
+  value: unknown,
+  label = "minds",
+  options: { allowEmpty?: boolean; defaultProvider?: string } = {},
+): MindReferenceConfig[] {
   if (!Array.isArray(value) || (!options.allowEmpty && value.length === 0)) {
     throw new Error(`${label} must be a non-empty array`);
   }
@@ -195,9 +208,20 @@ function parseMinds(value: unknown, label = "minds", options: { allowEmpty?: boo
 
     return {
       personaPath: expectString(mind.personaPath, `${label}[${index}].personaPath`),
-      provider: expectString(mind.provider, `${label}[${index}].provider`),
+      provider:
+        mind.provider === undefined
+          ? expectDefaultProvider(options.defaultProvider, `${label}[${index}].provider`)
+          : expectString(mind.provider, `${label}[${index}].provider`),
     };
   });
+}
+
+function expectDefaultProvider(value: string | undefined, label: string): string {
+  if (value === undefined) {
+    throw new Error(`${label} must be a non-empty string when globalMindsProvider is not set`);
+  }
+
+  return value;
 }
 
 function expectRecord(value: unknown, label: string): Record<string, unknown> {

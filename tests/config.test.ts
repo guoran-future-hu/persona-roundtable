@@ -42,6 +42,32 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
   assert.equal(config.disabledMinds?.[0]?.personaPath, "agents/feynman-perspective/SKILL.md");
 });
 
+test("parseSessionConfig applies globalMindsProvider when a mind omits provider", () => {
+  const config = parseSessionConfig({
+    topic: "A question",
+    context: "rich context",
+    globalMindsProvider: "openai",
+    moderatorProvider: "openai",
+    providers: {
+      openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+      deepseek: { type: "deepseek", model: "deepseek-v4-flash", apiKeyEnv: "DEEPSEEK_API_KEY" },
+    },
+    minds: [
+      {
+        personaPath: "agents/naval-perspective/SKILL.md",
+      },
+      {
+        personaPath: "agents/feynman-perspective/SKILL.md",
+        provider: "deepseek",
+      },
+    ],
+  });
+
+  assert.equal(config.globalMindsProvider, "openai");
+  assert.equal(config.minds[0]?.provider, "openai");
+  assert.equal(config.minds[1]?.provider, "deepseek");
+});
+
 test("loadSessionConfig resolves mind identity from persona folder metadata", async () => {
   const configDir = await mkdtemp(join(tmpdir(), "persona-roundtable-config-"));
   const personaDir = join(configDir, "agents", "naval");
@@ -167,6 +193,39 @@ test("parseSessionConfig rejects unknown mind provider", () => {
         minds: [{ personaPath: "x.md", provider: "missing" }],
       }),
     /unknown provider/,
+  );
+});
+
+test("parseSessionConfig rejects missing mind provider without globalMindsProvider", () => {
+  assert.throws(
+    () =>
+      parseSessionConfig({
+        topic: "A question",
+        context: {},
+        moderatorProvider: "openai",
+        providers: {
+          openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+        },
+        minds: [{ personaPath: "x.md" }],
+      }),
+    /minds\[0\]\.provider must be a non-empty string when globalMindsProvider is not set/,
+  );
+});
+
+test("parseSessionConfig rejects unknown globalMindsProvider", () => {
+  assert.throws(
+    () =>
+      parseSessionConfig({
+        topic: "A question",
+        context: {},
+        globalMindsProvider: "missing",
+        moderatorProvider: "openai",
+        providers: {
+          openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+        },
+        minds: [{ personaPath: "x.md" }],
+      }),
+    /globalMindsProvider 'missing' is not defined in providers/,
   );
 });
 

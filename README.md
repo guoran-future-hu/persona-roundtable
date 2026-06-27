@@ -71,19 +71,22 @@ npm run roundtable -- --config path/to/config.json
 - `topic`: the question for the roundtable
 - `context`: free-form rich background for the session
 - `workingLanguage`: free-form language instruction injected into every prompt
+- `globalMindsProvider`: default provider for minds that do not specify one
+- `moderatorProvider`: provider for the final moderator summary
 - `compressionProvider`: optional provider for live compressed CLI monitoring output
 - `providers`: OpenAI and Claude/Anthropic provider definitions
 - `minds`: the personas participating in this session
 - `disabledMinds`: optional parking lot for personas you want to keep in the JSON but not run
 
-Each mind entry only needs:
+With `globalMindsProvider` set, each mind entry only needs:
 
 ```json
 {
-  "personaPath": "agents/feynman/SKILL.md",
-  "provider": "deepseek"
+  "personaPath": "agents/feynman/SKILL.md"
 }
 ```
+
+Set `provider` on a mind only when it should override `globalMindsProvider`.
 
 The persona folder must include `persona.json` beside `SKILL.md`:
 
