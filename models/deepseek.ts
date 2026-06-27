@@ -60,7 +60,14 @@ export function extractDeepSeekText(payload: unknown): string {
     throw new Error("DeepSeek response did not contain message text output.");
   }
 
-  return firstChoice.message.content.trim();
+  const text = firstChoice.message.content.trim();
+
+  if (!text) {
+    const finishReason = typeof firstChoice.finish_reason === "string" ? firstChoice.finish_reason : "unknown";
+    throw new Error(`DeepSeek response contained empty message text output. finish_reason=${finishReason}`);
+  }
+
+  return text;
 }
 
 function normalizeRole(role: ChatMessage["role"]): "system" | "user" | "assistant" {

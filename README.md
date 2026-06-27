@@ -71,6 +71,7 @@ npm run roundtable -- --config path/to/config.json
 - `topic`: the question for the roundtable
 - `context`: free-form rich background for the session
 - `workingLanguage`: free-form language instruction injected into every prompt
+- `compressionProvider`: optional provider for live compressed CLI monitoring output
 - `providers`: OpenAI and Claude/Anthropic provider definitions
 - `minds`: the personas participating in this session
 - `disabledMinds`: optional parking lot for personas you want to keep in the JSON but not run
@@ -93,6 +94,8 @@ The persona folder must include `persona.json` beside `SKILL.md`:
 }
 ```
 
+Set `compressionProvider` to any configured provider name to print a compressed version of every generated speaker response while the run is in progress. These compressed summaries are for CLI monitoring and are not added to the reader-facing transcript.
+
 Change the JSON for every new session. There is no cross-session memory in the MVP.
 
 Each run writes two files under `sessions/`:
@@ -107,5 +110,6 @@ The predetermined prompt structures live in `prompts/`:
 - `prompts/round1.md`: initial opinion prompt
 - `prompts/round2.md`: cross-commentary and updated opinion prompt
 - `prompts/moderator.md`: final moderator summary prompt
+- `prompts/compression.md`: live CLI monitoring compression prompt
 
 These files are intended for context engineering. Keep placeholders like `{{topic}}`, `{{context}}`, and `{{persona}}` intact unless you also update the renderer.

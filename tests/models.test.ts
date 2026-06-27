@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { LoadedSessionConfig } from "../config";
 import { AnthropicModel } from "../models/anthropic";
-import { DeepSeekModel } from "../models/deepseek";
+import { DeepSeekModel, extractDeepSeekText } from "../models/deepseek";
 import { createDummyModels, DummyModel } from "../models/dummy";
 import { createModels } from "../models/factory";
 import { OpenAIModel } from "../models/openai";
@@ -149,6 +149,16 @@ test("DeepSeekModel supports max reasoning effort", async () => {
   assert.equal((capturedBody as { reasoning_effort: string }).reasoning_effort, "max");
 });
 
+test("extractDeepSeekText rejects empty message content", () => {
+  assert.throws(
+    () =>
+      extractDeepSeekText({
+        choices: [{ finish_reason: "length", message: { content: "" } }],
+      }),
+    /empty message text output.*finish_reason=length/,
+  );
+});
+
 test("DummyModel returns queued responses in order", async () => {
   const model = new DummyModel(["first", "second"]);
 
@@ -189,6 +199,45 @@ test("createDummyModels queues responses in roundtable call order", async () => 
   assert.equal(await model.generate([{ role: "user", content: "round 2 karpathy" }]), "[andrej-karpathy, round 2]");
   assert.equal(await model.generate([{ role: "user", content: "round 2 trump" }]), "[trump, round 2]");
   assert.equal(await model.generate([{ role: "user", content: "moderator" }]), "[moderator, summary]");
+});
+
+test("createDummyModels queues compression responses in runtime call order", async () => {
+  const config: LoadedSessionConfig = {
+    configPath: "config.json",
+    configDir: ".",
+    topic: "A question",
+    context: {},
+    testMode: true,
+    moderatorProvider: "deepseek",
+    compressionProvider: "deepseek",
+    providers: {
+      deepseek: {
+        type: "deepseek",
+        model: "deepseek-v4-flash",
+        apiKeyEnv: "DEEPSEEK_API_KEY",
+        reasoningEffort: "high",
+      },
+    },
+    minds: [
+      { id: "andrej-karpathy", name: "Andrej Karpathy", personaPath: "karpathy.md", provider: "deepseek" },
+      { id: "trump", name: "Donald Trump", personaPath: "trump.md", provider: "deepseek" },
+    ],
+  };
+
+  const models = createDummyModels(config);
+  const model = models.deepseek;
+
+  assert.ok(model);
+  assert.equal(await model.generate([{ role: "user", content: "round 1 karpathy" }]), "[andrej-karpathy, round 1]");
+  assert.equal(await model.generate([{ role: "user", content: "compress round 1 karpathy" }]), "[andrej-karpathy, round 1 compressed]");
+  assert.equal(await model.generate([{ role: "user", content: "round 1 trump" }]), "[trump, round 1]");
+  assert.equal(await model.generate([{ role: "user", content: "compress round 1 trump" }]), "[trump, round 1 compressed]");
+  assert.equal(await model.generate([{ role: "user", content: "round 2 karpathy" }]), "[andrej-karpathy, round 2]");
+  assert.equal(await model.generate([{ role: "user", content: "compress round 2 karpathy" }]), "[andrej-karpathy, round 2 compressed]");
+  assert.equal(await model.generate([{ role: "user", content: "round 2 trump" }]), "[trump, round 2]");
+  assert.equal(await model.generate([{ role: "user", content: "compress round 2 trump" }]), "[trump, round 2 compressed]");
+  assert.equal(await model.generate([{ role: "user", content: "moderator" }]), "[moderator, summary]");
+  assert.equal(await model.generate([{ role: "user", content: "compress moderator" }]), "[moderator, summary compressed]");
 });
 
 test("createModels only requires keys for providers used by the session", () => {
@@ -240,6 +289,51 @@ test("createModels only requires keys for providers used by the session", () => 
       delete process.env.ANTHROPIC_API_KEY;
     } else {
       process.env.ANTHROPIC_API_KEY = previousAnthropicKey;
+    }
+  }
+});
+
+test("createModels includes the compression provider when configured", () => {
+  const previousDeepSeekKey = process.env.DEEPSEEK_API_KEY;
+  const previousOpenAIKey = process.env.OPENAI_API_KEY;
+
+  process.env.DEEPSEEK_API_KEY = "deepseek-key";
+  process.env.OPENAI_API_KEY = "openai-key";
+
+  try {
+    const config: LoadedSessionConfig = {
+      configPath: "config.json",
+      configDir: ".",
+      topic: "A question",
+      context: {},
+      testMode: false,
+      moderatorProvider: "deepseek",
+      compressionProvider: "openai",
+      providers: {
+        openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+        deepseek: {
+          type: "deepseek",
+          model: "deepseek-v4-flash",
+          apiKeyEnv: "DEEPSEEK_API_KEY",
+          reasoningEffort: "high",
+        },
+      },
+      minds: [{ id: "naval", name: "Naval", personaPath: "naval.md", provider: "deepseek" }],
+    };
+
+    const models = createModels(config);
+    assert.deepEqual(Object.keys(models), ["deepseek", "openai"]);
+  } finally {
+    if (previousDeepSeekKey === undefined) {
+      delete process.env.DEEPSEEK_API_KEY;
+    } else {
+      process.env.DEEPSEEK_API_KEY = previousDeepSeekKey;
+    }
+
+    if (previousOpenAIKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = previousOpenAIKey;
     }
   }
 });

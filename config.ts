@@ -28,6 +28,7 @@ export interface SessionConfig {
   testMode: boolean;
   workingLanguage?: string;
   moderatorProvider: string;
+  compressionProvider?: string;
   providers: Record<string, ProviderConfig>;
   minds: MindConfig[];
   disabledMinds?: MindConfig[];
@@ -74,6 +75,7 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     config.workingLanguage === undefined ? undefined : expectString(config.workingLanguage, "workingLanguage");
 
   const moderatorProvider = expectString(config.moderatorProvider, "moderatorProvider");
+  const compressionProvider = parseOptionalProvider(config.compressionProvider, "compressionProvider");
   const providers = parseProviders(config.providers);
   const minds = parseMinds(config.minds);
   const disabledMinds =
@@ -81,6 +83,10 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
 
   if (!providers[moderatorProvider]) {
     throw new Error(`moderatorProvider '${moderatorProvider}' is not defined in providers`);
+  }
+
+  if (compressionProvider !== undefined && !providers[compressionProvider]) {
+    throw new Error(`compressionProvider '${compressionProvider}' is not defined in providers`);
   }
 
   for (const mind of minds) {
@@ -101,6 +107,7 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     testMode,
     workingLanguage,
     moderatorProvider,
+    compressionProvider,
     providers,
     minds,
     disabledMinds,
@@ -144,6 +151,14 @@ function parseReasoningEffort(value: unknown, label: string): "high" | "max" | u
   }
 
   throw new Error(`${label} must be 'high' or 'max'`);
+}
+
+function parseOptionalProvider(value: unknown, label: string): string | undefined {
+  if (value === undefined || value === null || value === "none") {
+    return undefined;
+  }
+
+  return expectString(value, label);
 }
 
 async function loadMindConfigs(minds: MindReferenceConfig[], configDir: string, label: string): Promise<MindConfig[]> {

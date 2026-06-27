@@ -6,3 +6,4 @@ agents-archive/
 .env.local
 config.json
 run.sh
+AGENTS.md

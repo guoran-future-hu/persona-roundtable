@@ -11,12 +11,14 @@ export interface PromptTemplateSet {
   roundOne: PromptTemplate;
   roundTwo: PromptTemplate;
   moderator: PromptTemplate;
+  compression: PromptTemplate;
 }
 
 export const defaultPromptTemplates: PromptTemplateSet = {
   roundOne: loadPromptTemplate("prompts/round1.md"),
   roundTwo: loadPromptTemplate("prompts/round2.md"),
   moderator: loadPromptTemplate("prompts/moderator.md"),
+  compression: loadPromptTemplate("prompts/compression.md"),
 };
 
 export function renderTemplate(template: PromptTemplate, variables: Record<string, string>): ChatMessage[] {

@@ -6,6 +6,9 @@ import type { ChatModel } from "./types";
 
 export function createModels(config: LoadedSessionConfig): Record<string, ChatModel> {
   const requiredProviders = new Set([config.moderatorProvider, ...config.minds.map((mind) => mind.provider)]);
+  if (config.compressionProvider !== undefined) {
+    requiredProviders.add(config.compressionProvider);
+  }
   const models: Record<string, ChatModel> = {};
 
   for (const providerName of requiredProviders) {

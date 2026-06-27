@@ -3,7 +3,7 @@ import "dotenv/config";
 import { loadSessionConfig } from "./config";
 import { createDummyModels } from "./models/dummy";
 import { createModels } from "./models/factory";
-import { runRoundtableSession } from "./orchestrator";
+import { runRoundtableSession, SessionRunError, type RunOptions } from "./orchestrator";
 import { loadMinds } from "./personas";
 import { saveTranscript } from "./transcript";
 
@@ -27,14 +27,36 @@ async function main(): Promise<void> {
   const models = config.testMode ? createDummyModels(config) : createModels(config);
   const minds = await loadMinds(config, models);
   const moderatorModel = models[config.moderatorProvider];
+  const compressionModel = config.compressionProvider === undefined ? undefined : models[config.compressionProvider];
 
   if (!moderatorModel) {
     throw new Error(`No model configured for moderator provider '${config.moderatorProvider}'`);
   }
 
-  const result = await runRoundtableSession(config, minds, {
+  if (config.compressionProvider !== undefined && !compressionModel) {
+    throw new Error(`No model configured for compression provider '${config.compressionProvider}'`);
+  }
+
+  const runOptions: RunOptions = {
     moderatorModel,
+    compressionModel,
     onProgress: (message) => console.log(message),
+    onSpeakerOutput: (output) => {
+      console.log(output.content);
+    },
+    onCompressedOutput: (output) => {
+      console.log(output.content);
+    },
+  };
+
+  const result = await runRoundtableSession(config, minds, runOptions).catch(async (error: unknown) => {
+    if (error instanceof SessionRunError) {
+      const { transcriptPath, devLogPath } = await saveTranscript(config, error.partialResult);
+      console.error(`Partial transcript saved: ${transcriptPath}`);
+      console.error(`Partial dev log saved: ${devLogPath}`);
+    }
+
+    throw error;
   });
 
   const { transcriptPath, devLogPath } = await saveTranscript(config, result);

@@ -64,6 +64,7 @@ export function renderTranscript(config: SessionConfig, result: SessionResult, c
     "",
     result.moderatorSummary,
     "",
+    ...formatRunError(result.error),
   ].join("\n");
 }
 
@@ -83,6 +84,7 @@ export function renderDevLog(config: SessionConfig, result: SessionResult, creat
         testMode: config.testMode,
         workingLanguage: config.workingLanguage,
         moderatorProvider: config.moderatorProvider,
+        compressionProvider: config.compressionProvider,
         minds: config.minds,
         disabledMinds: config.disabledMinds ?? [],
       },
@@ -91,11 +93,20 @@ export function renderDevLog(config: SessionConfig, result: SessionResult, creat
     ),
     "```",
     "",
+    ...formatRunError(result.error),
     "## Model Calls",
     "",
     result.modelCalls.map(formatModelCall).join("\n\n"),
     "",
   ].join("\n");
+}
+
+function formatRunError(error: string | undefined): string[] {
+  if (error === undefined) {
+    return [];
+  }
+
+  return ["## Run Error", "", "```text", error, "```", ""];
 }
 
 function formatMinds(minds: MindConfig[]): string {

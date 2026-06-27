@@ -31,15 +31,24 @@ export function createDummyModels(config: LoadedSessionConfig): Record<string, C
     queues[providerName].push(response);
   }
 
+  function pushCompression(response: string): void {
+    if (config.compressionProvider !== undefined) {
+      push(config.compressionProvider, response);
+    }
+  }
+
   for (const mind of config.minds) {
     push(mind.provider, `[${mind.id}, round 1]`);
+    pushCompression(`[${mind.id}, round 1 compressed]`);
   }
 
   for (const mind of config.minds) {
     push(mind.provider, `[${mind.id}, round 2]`);
+    pushCompression(`[${mind.id}, round 2 compressed]`);
   }
 
   push(config.moderatorProvider, "[moderator, summary]");
+  pushCompression("[moderator, summary compressed]");
 
   return Object.fromEntries(
     Object.entries(queues).map(([providerName, responses]) => [providerName, new DummyModel(responses)]),

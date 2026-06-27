@@ -12,6 +12,7 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
     testMode: true,
     workingLanguage: "Use English.",
     moderatorProvider: "openai",
+    compressionProvider: "deepseek",
     providers: {
       openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
       deepseek: { type: "deepseek", model: "deepseek-v4-flash", apiKeyEnv: "DEEPSEEK_API_KEY", reasoningEffort: "max" },
@@ -34,6 +35,7 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
   assert.equal(config.context, "rich context");
   assert.equal(config.testMode, true);
   assert.equal(config.workingLanguage, "Use English.");
+  assert.equal(config.compressionProvider, "deepseek");
   assert.equal(config.providers.openai.type, "openai");
   assert.equal(config.providers.deepseek.reasoningEffort, "max");
   assert.equal(config.minds[0]?.personaPath, "agents/naval-perspective/SKILL.md");
@@ -88,6 +90,27 @@ test("parseSessionConfig defaults testMode to false", () => {
   });
 
   assert.equal(config.testMode, false);
+  assert.equal(config.compressionProvider, undefined);
+});
+
+test("parseSessionConfig treats none compression provider as disabled", () => {
+  const config = parseSessionConfig({
+    topic: "A question",
+    context: "rich context",
+    moderatorProvider: "openai",
+    compressionProvider: "none",
+    providers: {
+      openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+    },
+    minds: [
+      {
+        personaPath: "agents/naval-perspective/SKILL.md",
+        provider: "openai",
+      },
+    ],
+  });
+
+  assert.equal(config.compressionProvider, undefined);
 });
 
 test("parseSessionConfig allows empty disabledMinds", () => {
@@ -144,5 +167,22 @@ test("parseSessionConfig rejects unknown mind provider", () => {
         minds: [{ personaPath: "x.md", provider: "missing" }],
       }),
     /unknown provider/,
+  );
+});
+
+test("parseSessionConfig rejects unknown compression provider", () => {
+  assert.throws(
+    () =>
+      parseSessionConfig({
+        topic: "A question",
+        context: {},
+        moderatorProvider: "openai",
+        compressionProvider: "missing",
+        providers: {
+          openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+        },
+        minds: [{ personaPath: "x.md", provider: "openai" }],
+      }),
+    /compressionProvider 'missing' is not defined in providers/,
   );
 });
