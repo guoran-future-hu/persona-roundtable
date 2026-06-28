@@ -1,7 +1,7 @@
 import { dirname, resolve } from "node:path";
 import { readUtf8Text } from "./text-io";
 
-export type ProviderType = "openai" | "anthropic" | "deepseek";
+export type ProviderType = "openai" | "codex" | "anthropic" | "claude" | "deepseek" | "openrouter";
 
 export interface ProviderConfig {
   type: ProviderType;
@@ -25,6 +25,7 @@ export interface MindReferenceConfig {
 export interface SessionConfig {
   topic: string;
   context: unknown;
+  maxRounds: number;
   testMode: boolean;
   workingLanguage?: string;
   globalMindsProvider?: string;
@@ -71,6 +72,7 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
   if (!("context" in config)) {
     throw new Error("session config must include context");
   }
+  const maxRounds = expectPositiveInteger(config.maxRounds, "maxRounds");
   const testMode = config.testMode === undefined ? false : expectBoolean(config.testMode, "testMode");
   const workingLanguage =
     config.workingLanguage === undefined ? undefined : expectString(config.workingLanguage, "workingLanguage");
@@ -112,6 +114,7 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
   return {
     topic,
     context: config.context,
+    maxRounds,
     testMode,
     workingLanguage,
     globalMindsProvider,
@@ -131,8 +134,15 @@ function parseProviders(value: unknown): Record<string, ProviderConfig> {
     const provider = expectRecord(providerValue, `providers.${key}`);
     const type = expectString(provider.type, `providers.${key}.type`);
 
-    if (type !== "openai" && type !== "anthropic" && type !== "deepseek") {
-      throw new Error(`providers.${key}.type must be 'openai', 'anthropic', or 'deepseek'`);
+    if (
+      type !== "openai" &&
+      type !== "codex" &&
+      type !== "anthropic" &&
+      type !== "claude" &&
+      type !== "deepseek" &&
+      type !== "openrouter"
+    ) {
+      throw new Error(`providers.${key}.type must be 'openai', 'codex', 'anthropic', 'claude', 'deepseek', or 'openrouter'`);
     }
 
     parsed[key] = {
@@ -246,4 +256,12 @@ function expectBoolean(value: unknown, label: string): boolean {
   }
 
   return value;
+}
+
+function expectPositiveInteger(value: unknown, label: string): number {
+  if (!Number.isInteger(value) || (value as number) < 1) {
+    throw new Error(`${label} must be a positive integer`);
+  }
+
+  return value as number;
 }

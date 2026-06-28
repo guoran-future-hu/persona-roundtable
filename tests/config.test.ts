@@ -9,6 +9,7 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
   const config = parseSessionConfig({
     topic: "A question",
     context: "rich context",
+    maxRounds: 5,
     testMode: true,
     workingLanguage: "Use English.",
     moderatorProvider: "openai",
@@ -33,6 +34,7 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
 
   assert.equal(config.topic, "A question");
   assert.equal(config.context, "rich context");
+  assert.equal(config.maxRounds, 5);
   assert.equal(config.testMode, true);
   assert.equal(config.workingLanguage, "Use English.");
   assert.equal(config.compressionProvider, "deepseek");
@@ -46,6 +48,7 @@ test("parseSessionConfig applies globalMindsProvider when a mind omits provider"
   const config = parseSessionConfig({
     topic: "A question",
     context: "rich context",
+    maxRounds: 5,
     globalMindsProvider: "openai",
     moderatorProvider: "openai",
     providers: {
@@ -68,6 +71,32 @@ test("parseSessionConfig applies globalMindsProvider when a mind omits provider"
   assert.equal(config.minds[1]?.provider, "deepseek");
 });
 
+test("parseSessionConfig accepts provider aliases and openrouter", () => {
+  const config = parseSessionConfig({
+    topic: "A question",
+    context: "rich context",
+    maxRounds: 5,
+    globalMindsProvider: "claude",
+    moderatorProvider: "codex",
+    compressionProvider: "openrouter",
+    providers: {
+      codex: { type: "codex", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+      claude: { type: "claude", model: "claude-sonnet-4-5", apiKeyEnv: "ANTHROPIC_API_KEY" },
+      openrouter: { type: "openrouter", model: "openai/gpt-5.5", apiKeyEnv: "OPENROUTER_API_KEY" },
+    },
+    minds: [
+      {
+        personaPath: "agents/naval-perspective/SKILL.md",
+      },
+    ],
+  });
+
+  assert.equal(config.providers.codex.type, "codex");
+  assert.equal(config.providers.claude.type, "claude");
+  assert.equal(config.providers.openrouter.type, "openrouter");
+  assert.equal(config.minds[0]?.provider, "claude");
+});
+
 test("loadSessionConfig resolves mind identity from persona folder metadata", async () => {
   const configDir = await mkdtemp(join(tmpdir(), "persona-roundtable-config-"));
   const personaDir = join(configDir, "agents", "naval");
@@ -79,6 +108,7 @@ test("loadSessionConfig resolves mind identity from persona folder metadata", as
     JSON.stringify({
       topic: "A question",
       context: "rich context",
+      maxRounds: 5,
       moderatorProvider: "openai",
       providers: {
         openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
@@ -103,6 +133,7 @@ test("parseSessionConfig defaults testMode to false", () => {
   const config = parseSessionConfig({
     topic: "A question",
     context: "rich context",
+    maxRounds: 5,
     moderatorProvider: "openai",
     providers: {
       openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
@@ -119,10 +150,56 @@ test("parseSessionConfig defaults testMode to false", () => {
   assert.equal(config.compressionProvider, undefined);
 });
 
+test("parseSessionConfig rejects missing maxRounds", () => {
+  assert.throws(
+    () =>
+      parseSessionConfig({
+        topic: "A question",
+        context: "rich context",
+        moderatorProvider: "openai",
+        providers: {
+          openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+        },
+        minds: [
+          {
+            personaPath: "agents/naval-perspective/SKILL.md",
+            provider: "openai",
+          },
+        ],
+      }),
+    /maxRounds must be a positive integer/,
+  );
+});
+
+test("parseSessionConfig rejects invalid maxRounds values", () => {
+  for (const maxRounds of [2.5, 0, -1]) {
+    assert.throws(
+      () =>
+        parseSessionConfig({
+          topic: "A question",
+          context: "rich context",
+          maxRounds,
+          moderatorProvider: "openai",
+          providers: {
+            openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+          },
+          minds: [
+            {
+              personaPath: "agents/naval-perspective/SKILL.md",
+              provider: "openai",
+            },
+          ],
+        }),
+      /maxRounds must be a positive integer/,
+    );
+  }
+});
+
 test("parseSessionConfig treats none compression provider as disabled", () => {
   const config = parseSessionConfig({
     topic: "A question",
     context: "rich context",
+    maxRounds: 5,
     moderatorProvider: "openai",
     compressionProvider: "none",
     providers: {
@@ -143,6 +220,7 @@ test("parseSessionConfig allows empty disabledMinds", () => {
   const config = parseSessionConfig({
     topic: "A question",
     context: "rich context",
+    maxRounds: 5,
     moderatorProvider: "openai",
     providers: {
       openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
@@ -165,6 +243,7 @@ test("parseSessionConfig rejects unsupported reasoning effort values", () => {
       parseSessionConfig({
         topic: "A question",
         context: {},
+        maxRounds: 5,
         moderatorProvider: "deepseek",
         providers: {
           deepseek: {
@@ -186,6 +265,7 @@ test("parseSessionConfig rejects unknown mind provider", () => {
       parseSessionConfig({
         topic: "A question",
         context: {},
+        maxRounds: 5,
         moderatorProvider: "openai",
         providers: {
           openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
@@ -202,6 +282,7 @@ test("parseSessionConfig rejects missing mind provider without globalMindsProvid
       parseSessionConfig({
         topic: "A question",
         context: {},
+        maxRounds: 5,
         moderatorProvider: "openai",
         providers: {
           openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
@@ -218,6 +299,7 @@ test("parseSessionConfig rejects unknown globalMindsProvider", () => {
       parseSessionConfig({
         topic: "A question",
         context: {},
+        maxRounds: 5,
         globalMindsProvider: "missing",
         moderatorProvider: "openai",
         providers: {
@@ -235,6 +317,7 @@ test("parseSessionConfig rejects unknown compression provider", () => {
       parseSessionConfig({
         topic: "A question",
         context: {},
+        maxRounds: 5,
         moderatorProvider: "openai",
         compressionProvider: "missing",
         providers: {

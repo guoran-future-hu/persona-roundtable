@@ -30,6 +30,13 @@ export class AnthropicModel implements ChatModel {
         role: message.role,
         content: message.content,
       }));
+    const body = {
+      model: this.model,
+      max_tokens: options.maxOutputTokens ?? 1400,
+      system,
+      messages: conversation,
+      ...(options.thinkingEnabled === false ? { thinking: { type: "disabled" } } : {}),
+    };
 
     const response = await this.fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -38,12 +45,7 @@ export class AnthropicModel implements ChatModel {
         "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: options.maxOutputTokens ?? 1400,
-        system,
-        messages: conversation,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

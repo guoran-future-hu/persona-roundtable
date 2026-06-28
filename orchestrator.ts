@@ -1,9 +1,11 @@
 import type { SessionConfig } from "./config";
-import type { LoadedMind } from "./personas";
 import type { ChatMessage, ChatModel } from "./models/types";
+import type { LoadedMind } from "./personas";
 import { defaultPromptTemplates, renderTemplate, type PromptTemplateSet } from "./prompt-templates";
 
 const MAIN_RESPONSE_MAX_OUTPUT_TOKENS = 8192;
+const MODERATOR_REVIEW_MAX_OUTPUT_TOKENS = 1400;
+const FINAL_SUMMARY_MAX_OUTPUT_TOKENS = 2200;
 const COMPRESSION_MAX_OUTPUT_TOKENS = 400;
 
 export interface RoundOutput {
@@ -12,17 +14,34 @@ export interface RoundOutput {
   content: string;
 }
 
+export interface RoundResult {
+  roundNumber: number;
+  outputs: RoundOutput[];
+}
+
+export type ModeratorDecision = "continue" | "end_discussion";
+
+export interface ModeratorReview {
+  roundNumber: number;
+  roundSummary: string;
+  progressNote: string;
+  comparisonToPrevious: string;
+  decision: ModeratorDecision;
+  endReason: string;
+}
+
 export interface SessionResult {
   topic: string;
   context: unknown;
   modelCalls: ModelCallLog[];
-  roundOne: RoundOutput[];
-  roundTwo: RoundOutput[];
-  moderatorSummary: string;
+  rounds: RoundResult[];
+  moderatorReviews: ModeratorReview[];
+  finalSummary?: string;
+  stopReason?: string;
   error?: string;
 }
 
-export type SpeakerOutputPhase = "round-one" | "round-two" | "moderator-summary";
+export type SpeakerOutputPhase = `round-${number}` | `moderator-review-${number}` | "final-summary";
 
 export interface ModelCallLog {
   phase: SpeakerOutputPhase | "compression";
@@ -73,85 +92,116 @@ export async function runRoundtableSession(
 ): Promise<SessionResult> {
   const context = serializeContext(config.context);
   const workingLanguage = config.workingLanguage ?? "Use the user's language unless the persona has a stronger reason to do otherwise.";
-  const roundOne: RoundOutput[] = [];
-  const roundTwo: RoundOutput[] = [];
+  const rounds: RoundResult[] = [];
+  const moderatorReviews: ModeratorReview[] = [];
   const modelCalls: ModelCallLog[] = [];
   const promptTemplates = options.promptTemplates ?? defaultPromptTemplates;
+  let stopReason: string | undefined;
+  let finalSummary: string | undefined;
 
   try {
-    for (const mind of minds) {
-      options.onProgress?.(`Round 1: ${mind.name}`);
-      const messages = buildRoundOneMessages(config.topic, context, workingLanguage, mind, minds, promptTemplates);
-      const content = await generateAndLog({
-        phase: "round-one",
-        speaker: mind.name,
-        model: mind.model,
-        messages,
+    for (let roundNumber = 1; roundNumber <= config.maxRounds; roundNumber += 1) {
+      const round: RoundResult = { roundNumber, outputs: [] };
+      rounds.push(round);
+
+      for (const mind of minds) {
+        options.onProgress?.(`Round ${roundNumber}: ${mind.name}`);
+        const messages =
+          roundNumber === 1
+            ? buildRoundOneMessages(config.topic, context, workingLanguage, mind, minds, promptTemplates)
+            : buildFollowUpRoundMessages(config.topic, context, workingLanguage, roundNumber, mind, rounds.slice(0, -1), moderatorReviews, promptTemplates);
+        const content = await generateAndLog({
+          phase: roundPhase(roundNumber),
+          speaker: mind.name,
+          model: mind.model,
+          messages,
+          modelCalls,
+          generateOptions: { maxOutputTokens: MAIN_RESPONSE_MAX_OUTPUT_TOKENS },
+        });
+        round.outputs.push({ mindId: mind.id, mindName: mind.name, content });
+        await handleSpeakerOutput({
+          topic: config.topic,
+          workingLanguage,
+          phase: roundPhase(roundNumber),
+          speaker: mind.name,
+          content,
+          modelCalls,
+          options,
+          promptTemplates,
+        });
+      }
+
+      options.onProgress?.(`Moderator review: Round ${roundNumber}`);
+      const moderatorMessages = buildModeratorMessages(
+        config.topic,
+        context,
+        workingLanguage,
+        round,
+        moderatorReviews,
+        config.maxRounds,
+        promptTemplates,
+      );
+      const rawModeratorReview = await generateAndLog({
+        phase: moderatorReviewPhase(roundNumber),
+        speaker: "Moderator",
+        model: options.moderatorModel,
+        messages: moderatorMessages,
         modelCalls,
-        generateOptions: { maxOutputTokens: MAIN_RESPONSE_MAX_OUTPUT_TOKENS },
+        generateOptions: { maxOutputTokens: MODERATOR_REVIEW_MAX_OUTPUT_TOKENS },
       });
-      roundOne.push({ mindId: mind.id, mindName: mind.name, content });
+      const moderatorReview = parseModeratorReview(rawModeratorReview, roundNumber);
+      moderatorReviews.push(moderatorReview);
       await handleSpeakerOutput({
         topic: config.topic,
         workingLanguage,
-        phase: "round-one",
-        speaker: mind.name,
-        content,
+        phase: moderatorReviewPhase(roundNumber),
+        speaker: "Moderator",
+        content: formatModeratorReview(moderatorReview),
         modelCalls,
         options,
         promptTemplates,
       });
+
+      if (roundNumber >= config.maxRounds) {
+        stopReason = `Reached maxRounds (${config.maxRounds}).`;
+        break;
+      }
+
+      if (roundNumber > 1 && moderatorReview.decision === "end_discussion") {
+        stopReason = endDiscussion(moderatorReview);
+        break;
+      }
     }
 
-    for (const mind of minds) {
-      options.onProgress?.(`Round 2: ${mind.name}`);
-      const messages = buildRoundTwoMessages(config.topic, context, workingLanguage, mind, roundOne, promptTemplates);
-      const content = await generateAndLog({
-        phase: "round-two",
-        speaker: mind.name,
-        model: mind.model,
-        messages,
-        modelCalls,
-        generateOptions: { maxOutputTokens: MAIN_RESPONSE_MAX_OUTPUT_TOKENS },
-      });
-      roundTwo.push({ mindId: mind.id, mindName: mind.name, content });
-      await handleSpeakerOutput({
-        topic: config.topic,
-        workingLanguage,
-        phase: "round-two",
-        speaker: mind.name,
-        content,
-        modelCalls,
-        options,
-        promptTemplates,
-      });
-    }
-
-    options.onProgress?.("Moderator summary");
-    const moderatorMessages = buildModeratorMessages(config.topic, context, workingLanguage, roundOne, roundTwo, promptTemplates);
-    const moderatorSummary = await generateAndLog({
-      phase: "moderator-summary",
+    options.onProgress?.("Moderator final summary");
+    const finalSummaryMessages = buildFinalSummaryMessages(
+      config.topic,
+      context,
+      workingLanguage,
+      rounds,
+      moderatorReviews,
+      stopReason ?? "Discussion ended.",
+      promptTemplates,
+    );
+    finalSummary = await generateAndLog({
+      phase: "final-summary",
       speaker: "Moderator",
       model: options.moderatorModel,
-      messages: moderatorMessages,
+      messages: finalSummaryMessages,
       modelCalls,
-      generateOptions: { maxOutputTokens: MAIN_RESPONSE_MAX_OUTPUT_TOKENS },
+      generateOptions: { maxOutputTokens: FINAL_SUMMARY_MAX_OUTPUT_TOKENS },
     });
-    await handleSpeakerOutput({
-      topic: config.topic,
-      workingLanguage,
-      phase: "moderator-summary",
+    options.onSpeakerOutput?.({
+      phase: "final-summary",
+      phaseLabel: formatPhaseLabel("final-summary"),
       speaker: "Moderator",
-      content: moderatorSummary,
-      modelCalls,
-      options,
-      promptTemplates,
+      content: finalSummary,
     });
 
-    return buildSessionResult(config, modelCalls, roundOne, roundTwo, moderatorSummary);
+    return buildSessionResult(config, modelCalls, rounds, moderatorReviews, finalSummary, stopReason);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new SessionRunError(message, buildSessionResult(config, modelCalls, roundOne, roundTwo, "", message));
+    throw new SessionRunError(message, buildSessionResult(config, modelCalls, rounds, moderatorReviews, finalSummary, stopReason, message));
   }
 }
 
@@ -180,22 +230,26 @@ export function buildRoundOneMessages(
   });
 }
 
-export function buildRoundTwoMessages(
+export function buildFollowUpRoundMessages(
   topic: string,
   context: string,
   workingLanguage: string,
+  roundNumber: number,
   mind: LoadedMind,
-  roundOne: RoundOutput[],
+  previousRounds: RoundResult[],
+  moderatorReviews: ModeratorReview[],
   promptTemplates: PromptTemplateSet = defaultPromptTemplates,
 ): ChatMessage[] {
-  return renderTemplate(promptTemplates.roundTwo, {
+  return renderTemplate(promptTemplates.followUpRound, {
     mind_name: mind.name,
-    active_mind_names: formatActiveMindNames(roundOne),
+    active_mind_names: formatActiveMindNames(previousRounds[0]?.outputs ?? []),
+    round_number: String(roundNumber),
     working_language: workingLanguage,
     persona: mind.persona,
     topic,
     context,
-    round_one_opinions: formatRoundOneOpinions(roundOne),
+    previous_rounds: formatPreviousRounds(previousRounds),
+    moderator_progress_notes: formatModeratorProgressNotes(moderatorReviews),
   });
 }
 
@@ -203,16 +257,38 @@ export function buildModeratorMessages(
   topic: string,
   context: string,
   workingLanguage: string,
-  roundOne: RoundOutput[],
-  roundTwo: RoundOutput[],
+  currentRound: RoundResult,
+  previousReviews: ModeratorReview[],
+  maxRounds: number,
   promptTemplates: PromptTemplateSet = defaultPromptTemplates,
 ): ChatMessage[] {
   return renderTemplate(promptTemplates.moderator, {
     working_language: workingLanguage,
     topic,
     context,
-    round_one_opinions: formatRoundOneOpinions(roundOne),
-    round_two_opinions: formatRoundOneOpinions(roundTwo),
+    round_number: String(currentRound.roundNumber),
+    max_rounds: String(maxRounds),
+    previous_progress_notes: formatModeratorProgressNotes(previousReviews),
+    current_round_opinions: formatRoundOpinions(currentRound.outputs),
+  });
+}
+
+export function buildFinalSummaryMessages(
+  topic: string,
+  context: string,
+  workingLanguage: string,
+  rounds: RoundResult[],
+  moderatorReviews: ModeratorReview[],
+  stopReason: string,
+  promptTemplates: PromptTemplateSet = defaultPromptTemplates,
+): ChatMessage[] {
+  return renderTemplate(promptTemplates.finalSummary, {
+    working_language: workingLanguage,
+    topic,
+    context,
+    stop_reason: stopReason,
+    moderator_progress_notes: formatModeratorProgressNotes(moderatorReviews),
+    previous_rounds: formatPreviousRounds(rounds),
   });
 }
 
@@ -231,6 +307,49 @@ export function buildCompressionMessages(
     speaker_name: speaker,
     speaker_output: output,
   });
+}
+
+export function parseModeratorReview(raw: string, roundNumber: number): ModeratorReview {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(raw.trim()) as unknown;
+  } catch {
+    throw new Error(`Moderator review for round ${roundNumber} was not valid JSON`);
+  }
+
+  if (!isRecord(parsed)) {
+    throw new Error(`Moderator review for round ${roundNumber} must be a JSON object`);
+  }
+
+  const parsedDecision = expectModeratorDecision(parsed.decision, roundNumber);
+  const decision = normalizeModeratorDecision(parsedDecision, roundNumber);
+
+  return {
+    roundNumber,
+    roundSummary: expectString(parsed.roundSummary, "roundSummary", roundNumber),
+    progressNote: expectString(parsed.progressNote, "progressNote", roundNumber),
+    comparisonToPrevious: expectString(parsed.comparisonToPrevious, "comparisonToPrevious", roundNumber),
+    decision,
+    endReason:
+      parsedDecision !== decision
+        ? ""
+        : expectString(parsed.endReason, "endReason", roundNumber),
+  };
+}
+
+export function formatModeratorReview(review: ModeratorReview): string {
+  return [
+    `Round summary: ${review.roundSummary}`,
+    "",
+    `Progress note: ${review.progressNote}`,
+    "",
+    `Comparison to previous: ${review.comparisonToPrevious}`,
+    "",
+    `Decision: ${review.decision}`,
+    "",
+    `End reason: ${review.endReason || "N/A"}`,
+  ].join("\n");
 }
 
 export function serializeContext(context: unknown): string {
@@ -275,7 +394,7 @@ async function handleSpeakerOutput({
       model: options.compressionModel,
       messages,
       modelCalls,
-      generateOptions: { maxOutputTokens: COMPRESSION_MAX_OUTPUT_TOKENS },
+      generateOptions: { maxOutputTokens: COMPRESSION_MAX_OUTPUT_TOKENS, thinkingEnabled: false },
     });
     options.onCompressedOutput?.({ phase, phaseLabel, speaker, content: compressed });
   } catch (error) {
@@ -327,24 +446,55 @@ async function generateAndLog({
 function buildSessionResult(
   config: SessionConfig,
   modelCalls: ModelCallLog[],
-  roundOne: RoundOutput[],
-  roundTwo: RoundOutput[],
-  moderatorSummary: string,
+  rounds: RoundResult[],
+  moderatorReviews: ModeratorReview[],
+  finalSummary?: string,
+  stopReason?: string,
   error?: string,
 ): SessionResult {
   return {
     topic: config.topic,
     context: config.context,
     modelCalls,
-    roundOne,
-    roundTwo,
-    moderatorSummary,
+    rounds,
+    moderatorReviews,
+    finalSummary,
+    stopReason,
     error,
   };
 }
 
-function formatRoundOneOpinions(outputs: RoundOutput[]): string {
-  return outputs.map((output) => `<opinion speaker="${output.mindName}">\n${output.mindName} previously said:\n${output.content}\n</opinion>`).join("\n\n");
+function endDiscussion(review: ModeratorReview): string {
+  return review.endReason || "Moderator ended the discussion.";
+}
+
+function formatPreviousRounds(rounds: RoundResult[]): string {
+  if (rounds.length === 0) {
+    return "No previous rounds.";
+  }
+
+  return rounds
+    .map((round) => `<round number="${round.roundNumber}">\n${formatRoundOpinions(round.outputs)}\n</round>`)
+    .join("\n\n");
+}
+
+function formatRoundOpinions(outputs: RoundOutput[]): string {
+  return outputs
+    .map((output) => `<opinion speaker="${output.mindName}">\n${output.mindName} said:\n${output.content}\n</opinion>`)
+    .join("\n\n");
+}
+
+function formatModeratorProgressNotes(reviews: ModeratorReview[]): string {
+  if (reviews.length === 0) {
+    return "No previous moderator progress notes.";
+  }
+
+  return reviews
+    .map(
+      (review) =>
+        `<progress-note round="${review.roundNumber}">\nSummary: ${review.roundSummary}\nProgress: ${review.progressNote}\nComparison: ${review.comparisonToPrevious}\nDecision: ${review.decision}\n</progress-note>`,
+    )
+    .join("\n\n");
 }
 
 function formatActiveMindNames(minds: Array<Pick<LoadedMind, "name"> | Pick<RoundOutput, "mindName">>): string {
@@ -352,13 +502,51 @@ function formatActiveMindNames(minds: Array<Pick<LoadedMind, "name"> | Pick<Roun
 }
 
 function formatPhaseLabel(phase: SpeakerOutputPhase): string {
-  if (phase === "round-one") {
-    return "Round 1";
+  const roundMatch = phase.match(/^round-(\d+)$/);
+  if (roundMatch?.[1]) {
+    return `Round ${roundMatch[1]}`;
   }
 
-  if (phase === "round-two") {
-    return "Round 2";
+  const moderatorMatch = phase.match(/^moderator-review-(\d+)$/);
+  if (moderatorMatch?.[1]) {
+    return `Moderator Review: Round ${moderatorMatch[1]}`;
   }
 
-  return "Moderator Summary";
+  if (phase === "final-summary") {
+    return "Moderator Final Summary";
+  }
+
+  return phase;
+}
+
+function roundPhase(roundNumber: number): SpeakerOutputPhase {
+  return `round-${roundNumber}` as SpeakerOutputPhase;
+}
+
+function moderatorReviewPhase(roundNumber: number): SpeakerOutputPhase {
+  return `moderator-review-${roundNumber}` as SpeakerOutputPhase;
+}
+
+function expectModeratorDecision(value: unknown, roundNumber: number): ModeratorDecision {
+  if (value === "continue" || value === "end_discussion") {
+    return value;
+  }
+
+  throw new Error(`Moderator review for round ${roundNumber} has invalid decision`);
+}
+
+function normalizeModeratorDecision(decision: ModeratorDecision, roundNumber: number): ModeratorDecision {
+  return roundNumber === 1 && decision === "end_discussion" ? "continue" : decision;
+}
+
+function expectString(value: unknown, field: string, roundNumber: number): string {
+  if (typeof value !== "string") {
+    throw new Error(`Moderator review for round ${roundNumber} must include string field '${field}'`);
+  }
+
+  return value;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

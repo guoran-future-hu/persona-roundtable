@@ -1,8 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { MindConfig, SessionConfig } from "./config";
-import type { ModelCallLog, RoundOutput, SessionResult } from "./orchestrator";
-import { serializeContext } from "./orchestrator";
+import type { ModelCallLog, ModeratorReview, RoundOutput, RoundResult, SessionResult } from "./orchestrator";
+import { formatModeratorReview, serializeContext } from "./orchestrator";
 import { writeUtf8Text } from "./text-io";
 
 export interface SavedSessionPaths {
@@ -52,17 +52,11 @@ export function renderTranscript(config: SessionConfig, result: SessionResult, c
     "",
     formatMinds(config.minds),
     "",
-    "## Round 1: Initial Views",
+    formatRounds(result.rounds, result.moderatorReviews),
+    ...formatFinalSummary(result.finalSummary),
+    "## Stop Reason",
     "",
-    formatOutputs(result.roundOne),
-    "",
-    "## Round 2: Responses and Updates",
-    "",
-    formatOutputs(result.roundTwo),
-    "",
-    "## Moderator Summary",
-    "",
-    result.moderatorSummary,
+    result.stopReason ?? "Not available.",
     "",
     ...formatRunError(result.error),
   ].join("\n");
@@ -81,6 +75,7 @@ export function renderDevLog(config: SessionConfig, result: SessionResult, creat
       {
         topic: config.topic,
         context: config.context,
+        maxRounds: config.maxRounds,
         testMode: config.testMode,
         workingLanguage: config.workingLanguage,
         globalMindsProvider: config.globalMindsProvider,
@@ -110,12 +105,44 @@ function formatRunError(error: string | undefined): string[] {
   return ["## Run Error", "", "```text", error, "```", ""];
 }
 
+function formatFinalSummary(finalSummary: string | undefined): string[] {
+  if (finalSummary === undefined) {
+    return [];
+  }
+
+  return ["## Moderator Final Summary", "", finalSummary, ""];
+}
+
 function formatMinds(minds: MindConfig[]): string {
   return minds.map((mind) => `- ${mind.name} (${mind.provider})`).join("\n");
 }
 
 function formatOutputs(outputs: RoundOutput[]): string {
   return outputs.map((output) => `### ${output.mindName}\n\n${output.content}`).join("\n\n");
+}
+
+function formatRounds(rounds: RoundResult[], reviews: ModeratorReview[]): string {
+  return rounds
+    .flatMap((round) => {
+      const review = reviews.find((candidate) => candidate.roundNumber === round.roundNumber);
+      const roundTitle = round.roundNumber === 1 ? "Initial Views" : "Responses and Updates";
+
+      return [
+        `## Round ${round.roundNumber}: ${roundTitle}`,
+        "",
+        formatOutputs(round.outputs),
+        "",
+        review === undefined ? "" : formatModeratorSection(review, round.roundNumber === reviews.at(-1)?.roundNumber),
+        "",
+      ];
+    })
+    .join("\n");
+}
+
+function formatModeratorSection(review: ModeratorReview, isClosingReview: boolean): string {
+  const heading = isClosingReview ? `## Moderator Closing Review (Round ${review.roundNumber})` : `## Moderator Review: Round ${review.roundNumber}`;
+
+  return [heading, "", formatModeratorReview(review)].join("\n");
 }
 
 function formatModelCall(call: ModelCallLog): string {

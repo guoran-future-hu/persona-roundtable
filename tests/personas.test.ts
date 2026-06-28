@@ -13,6 +13,7 @@ function makeConfig(configDir: string, testMode: boolean): LoadedSessionConfig {
     configDir,
     topic: "A question",
     context: {},
+    maxRounds: 2,
     testMode,
     moderatorProvider: "fake",
     providers: {

@@ -9,15 +9,17 @@ export interface PromptTemplate {
 
 export interface PromptTemplateSet {
   roundOne: PromptTemplate;
-  roundTwo: PromptTemplate;
+  followUpRound: PromptTemplate;
   moderator: PromptTemplate;
+  finalSummary: PromptTemplate;
   compression: PromptTemplate;
 }
 
 export const defaultPromptTemplates: PromptTemplateSet = {
   roundOne: loadPromptTemplate("prompts/round1.md"),
-  roundTwo: loadPromptTemplate("prompts/round2.md"),
+  followUpRound: loadPromptTemplate("prompts/follow-up-round.md"),
   moderator: loadPromptTemplate("prompts/moderator.md"),
+  finalSummary: loadPromptTemplate("prompts/final-summary.md"),
   compression: loadPromptTemplate("prompts/compression.md"),
 };
 

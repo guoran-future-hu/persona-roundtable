@@ -49,7 +49,7 @@ DEEPSEEK_API_KEY=your_key_here
 
 Do not commit `.env`. It is ignored by git.
 
-The example session uses DeepSeek `deepseek-v4-flash` with thinking enabled and `reasoningEffort: "high"`. DeepSeek supports `high` and `max`; set `reasoningEffort` in the JSON config. OpenAI and Claude/Anthropic remain available by changing provider fields in the JSON.
+The example session uses DeepSeek `deepseek-v4-flash` with thinking enabled and `reasoningEffort: "high"`. DeepSeek supports `high` and `max`; set `reasoningEffort` in the JSON config. DeepSeek, Codex/OpenAI, Claude/Anthropic, and OpenRouter are available by changing provider fields in the JSON.
 
 ## Run
 
@@ -70,11 +70,12 @@ npm run roundtable -- --config path/to/config.json
 
 - `topic`: the question for the roundtable
 - `context`: free-form rich background for the session
+- `maxRounds`: required positive integer hard cap for discussion rounds
 - `workingLanguage`: free-form language instruction injected into every prompt
 - `globalMindsProvider`: default provider for minds that do not specify one
-- `moderatorProvider`: provider for the final moderator summary
+- `moderatorProvider`: provider for moderator progress reviews
 - `compressionProvider`: optional provider for live compressed CLI monitoring output
-- `providers`: OpenAI and Claude/Anthropic provider definitions
+- `providers`: DeepSeek, Codex/OpenAI, Claude/Anthropic, or OpenRouter provider definitions
 - `minds`: the personas participating in this session
 - `disabledMinds`: optional parking lot for personas you want to keep in the JSON but not run
 
@@ -97,7 +98,9 @@ The persona folder must include `persona.json` beside `SKILL.md`:
 }
 ```
 
-Set `compressionProvider` to any configured provider name to print a compressed version of every generated speaker response while the run is in progress. These compressed summaries are for CLI monitoring and are not added to the reader-facing transcript.
+After each round, the moderator writes a short structured progress review. The discussion continues until it reaches `maxRounds` or the moderator detects that the minds are circling the same semantic points and ends the discussion.
+
+Set `compressionProvider` to any configured provider name to print a compressed version of every generated speaker response and moderator review while the run is in progress. These compressed summaries are for CLI monitoring and are not added to the reader-facing transcript.
 
 Change the JSON for every new session. There is no cross-session memory in the MVP.
 
@@ -111,8 +114,9 @@ Each run writes two files under `sessions/`:
 The predetermined prompt structures live in `prompts/`:
 
 - `prompts/round1.md`: initial opinion prompt
-- `prompts/round2.md`: cross-commentary and updated opinion prompt
-- `prompts/moderator.md`: final moderator summary prompt
+- `prompts/follow-up-round.md`: cross-commentary and updated opinion prompt for rounds after the first
+- `prompts/moderator.md`: structured moderator progress review prompt
+- `prompts/final-summary.md`: final moderator synthesis prompt
 - `prompts/compression.md`: live CLI monitoring compression prompt
 
 These files are intended for context engineering. Keep placeholders like `{{topic}}`, `{{context}}`, and `{{persona}}` intact unless you also update the renderer.

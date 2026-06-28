@@ -7,6 +7,8 @@ export interface ChatMessage {
 
 export interface GenerateOptions {
   maxOutputTokens?: number;
+  /** false asks adapters to disable provider reasoning/thinking when their API supports it. */
+  thinkingEnabled?: boolean;
 }
 
 export interface ChatModel {

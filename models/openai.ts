@@ -19,20 +19,23 @@ export class OpenAIModel implements ChatModel {
   }
 
   async generate(messages: ChatMessage[], options: GenerateOptions = {}): Promise<string> {
+    const body = {
+      model: this.model,
+      input: messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
+      ...(options.thinkingEnabled === false ? { reasoning: { effort: "none" } } : {}),
+      max_output_tokens: options.maxOutputTokens ?? 1400,
+    };
+
     const response = await this.fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: this.model,
-        input: messages.map((message) => ({
-          role: message.role,
-          content: message.content,
-        })),
-        max_output_tokens: options.maxOutputTokens ?? 1400,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

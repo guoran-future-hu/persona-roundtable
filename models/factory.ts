@@ -2,6 +2,7 @@ import type { LoadedSessionConfig } from "../config";
 import { AnthropicModel } from "./anthropic";
 import { DeepSeekModel } from "./deepseek";
 import { OpenAIModel } from "./openai";
+import { OpenRouterModel } from "./openrouter";
 import type { ChatModel } from "./types";
 
 export function createModels(config: LoadedSessionConfig): Record<string, ChatModel> {
@@ -24,13 +25,18 @@ export function createModels(config: LoadedSessionConfig): Record<string, ChatMo
       throw new Error(`Missing API key environment variable '${provider.apiKeyEnv}' for provider '${providerName}'`);
     }
 
-    if (provider.type === "openai") {
+    if (provider.type === "openai" || provider.type === "codex") {
       models[providerName] = new OpenAIModel({ apiKey, model: provider.model });
       continue;
     }
 
-    if (provider.type === "anthropic") {
+    if (provider.type === "anthropic" || provider.type === "claude") {
       models[providerName] = new AnthropicModel({ apiKey, model: provider.model });
+      continue;
+    }
+
+    if (provider.type === "openrouter") {
+      models[providerName] = new OpenRouterModel({ apiKey, model: provider.model });
       continue;
     }
 

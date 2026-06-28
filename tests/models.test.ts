@@ -6,6 +6,7 @@ import { DeepSeekModel, extractDeepSeekText } from "../models/deepseek";
 import { createDummyModels, DummyModel } from "../models/dummy";
 import { createModels } from "../models/factory";
 import { OpenAIModel } from "../models/openai";
+import { OpenRouterModel } from "../models/openrouter";
 import type { HttpFetch } from "../models/types";
 
 test("OpenAIModel creates a Responses API request shape", async () => {
@@ -43,6 +44,39 @@ test("OpenAIModel creates a Responses API request shape", async () => {
   });
 });
 
+test("OpenAIModel can disable reasoning for short outputs", async () => {
+  let capturedBody: unknown;
+  const fakeFetch: HttpFetch = async (_url, init) => {
+    capturedBody = JSON.parse(init.body) as unknown;
+
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      async json() {
+        return { output_text: "short text" };
+      },
+      async text() {
+        return "";
+      },
+    };
+  };
+
+  const model = new OpenAIModel({ apiKey: "key", model: "gpt-5.5", fetch: fakeFetch });
+
+  await model.generate([{ role: "user", content: "compress this" }], {
+    maxOutputTokens: 400,
+    thinkingEnabled: false,
+  });
+
+  assert.deepEqual(capturedBody, {
+    model: "gpt-5.5",
+    input: [{ role: "user", content: "compress this" }],
+    reasoning: { effort: "none" },
+    max_output_tokens: 400,
+  });
+});
+
 test("AnthropicModel creates a Messages API request shape", async () => {
   let capturedBody: unknown;
   const fakeFetch: HttpFetch = async (_url, init) => {
@@ -73,6 +107,86 @@ test("AnthropicModel creates a Messages API request shape", async () => {
     max_tokens: 1400,
     system: "system prompt",
     messages: [{ role: "user", content: "user prompt" }],
+  });
+});
+
+test("AnthropicModel can disable thinking for short outputs", async () => {
+  let capturedBody: unknown;
+  const fakeFetch: HttpFetch = async (_url, init) => {
+    capturedBody = JSON.parse(init.body) as unknown;
+
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      async json() {
+        return { content: [{ type: "text", text: "short text" }] };
+      },
+      async text() {
+        return "";
+      },
+    };
+  };
+
+  const model = new AnthropicModel({ apiKey: "key", model: "claude-sonnet-4-5", fetch: fakeFetch });
+
+  await model.generate([{ role: "user", content: "compress this" }], {
+    maxOutputTokens: 400,
+    thinkingEnabled: false,
+  });
+
+  assert.deepEqual(capturedBody, {
+    model: "claude-sonnet-4-5",
+    max_tokens: 400,
+    system: "",
+    messages: [{ role: "user", content: "compress this" }],
+    thinking: { type: "disabled" },
+  });
+});
+
+test("OpenRouterModel creates a chat completions request shape and can disable reasoning", async () => {
+  let capturedUrl = "";
+  let capturedBody: unknown;
+  const fakeFetch: HttpFetch = async (url, init) => {
+    capturedUrl = url;
+    capturedBody = JSON.parse(init.body) as unknown;
+
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      async json() {
+        return { choices: [{ message: { content: "openrouter text" } }] };
+      },
+      async text() {
+        return "";
+      },
+    };
+  };
+
+  const model = new OpenRouterModel({ apiKey: "key", model: "openai/gpt-5.5", fetch: fakeFetch });
+  const output = await model.generate(
+    [
+      { role: "developer", content: "developer prompt" },
+      { role: "user", content: "compress this" },
+    ],
+    {
+      maxOutputTokens: 400,
+      thinkingEnabled: false,
+    },
+  );
+
+  assert.equal(output, "openrouter text");
+  assert.equal(capturedUrl, "https://openrouter.ai/api/v1/chat/completions");
+  assert.deepEqual(capturedBody, {
+    model: "openai/gpt-5.5",
+    messages: [
+      { role: "system", content: "developer prompt" },
+      { role: "user", content: "compress this" },
+    ],
+    reasoning: { effort: "none" },
+    max_tokens: 400,
+    stream: false,
   });
 });
 
@@ -149,6 +263,40 @@ test("DeepSeekModel supports max reasoning effort", async () => {
   assert.equal((capturedBody as { reasoning_effort: string }).reasoning_effort, "max");
 });
 
+test("DeepSeekModel can disable thinking for short outputs", async () => {
+  let capturedBody: unknown;
+  const fakeFetch: HttpFetch = async (_url, init) => {
+    capturedBody = JSON.parse(init.body) as unknown;
+
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      async json() {
+        return { choices: [{ message: { content: "short text" } }] };
+      },
+      async text() {
+        return "";
+      },
+    };
+  };
+
+  const model = new DeepSeekModel({ apiKey: "key", model: "deepseek-v4-flash", fetch: fakeFetch });
+
+  await model.generate([{ role: "user", content: "compress this" }], {
+    maxOutputTokens: 400,
+    thinkingEnabled: false,
+  });
+
+  assert.deepEqual(capturedBody, {
+    model: "deepseek-v4-flash",
+    messages: [{ role: "user", content: "compress this" }],
+    thinking: { type: "disabled" },
+    max_tokens: 400,
+    stream: false,
+  });
+});
+
 test("extractDeepSeekText rejects empty message content", () => {
   assert.throws(
     () =>
@@ -174,6 +322,7 @@ test("createDummyModels queues responses in roundtable call order", async () => 
     configDir: ".",
     topic: "A question",
     context: {},
+    maxRounds: 2,
     testMode: true,
     moderatorProvider: "deepseek",
     providers: {
@@ -196,9 +345,17 @@ test("createDummyModels queues responses in roundtable call order", async () => 
   assert.ok(model);
   assert.equal(await model.generate([{ role: "user", content: "round 1 karpathy" }]), "[andrej-karpathy, round 1]");
   assert.equal(await model.generate([{ role: "user", content: "round 1 trump" }]), "[trump, round 1]");
+  assert.equal(
+    (JSON.parse(await model.generate([{ role: "user", content: "moderator round 1" }])) as { roundSummary: string }).roundSummary,
+    "[moderator, round 1 summary]",
+  );
   assert.equal(await model.generate([{ role: "user", content: "round 2 karpathy" }]), "[andrej-karpathy, round 2]");
   assert.equal(await model.generate([{ role: "user", content: "round 2 trump" }]), "[trump, round 2]");
-  assert.equal(await model.generate([{ role: "user", content: "moderator" }]), "[moderator, summary]");
+  assert.equal(
+    (JSON.parse(await model.generate([{ role: "user", content: "moderator round 2" }])) as { roundSummary: string }).roundSummary,
+    "[moderator, round 2 summary]",
+  );
+  assert.equal(await model.generate([{ role: "user", content: "final summary" }]), "[moderator, final summary]");
 });
 
 test("createDummyModels queues compression responses in runtime call order", async () => {
@@ -207,6 +364,7 @@ test("createDummyModels queues compression responses in runtime call order", asy
     configDir: ".",
     topic: "A question",
     context: {},
+    maxRounds: 2,
     testMode: true,
     moderatorProvider: "deepseek",
     compressionProvider: "deepseek",
@@ -232,12 +390,21 @@ test("createDummyModels queues compression responses in runtime call order", asy
   assert.equal(await model.generate([{ role: "user", content: "compress round 1 karpathy" }]), "[andrej-karpathy, round 1 compressed]");
   assert.equal(await model.generate([{ role: "user", content: "round 1 trump" }]), "[trump, round 1]");
   assert.equal(await model.generate([{ role: "user", content: "compress round 1 trump" }]), "[trump, round 1 compressed]");
+  assert.equal(
+    (JSON.parse(await model.generate([{ role: "user", content: "moderator round 1" }])) as { roundSummary: string }).roundSummary,
+    "[moderator, round 1 summary]",
+  );
+  assert.equal(await model.generate([{ role: "user", content: "compress moderator round 1" }]), "[moderator, round 1 compressed]");
   assert.equal(await model.generate([{ role: "user", content: "round 2 karpathy" }]), "[andrej-karpathy, round 2]");
   assert.equal(await model.generate([{ role: "user", content: "compress round 2 karpathy" }]), "[andrej-karpathy, round 2 compressed]");
   assert.equal(await model.generate([{ role: "user", content: "round 2 trump" }]), "[trump, round 2]");
   assert.equal(await model.generate([{ role: "user", content: "compress round 2 trump" }]), "[trump, round 2 compressed]");
-  assert.equal(await model.generate([{ role: "user", content: "moderator" }]), "[moderator, summary]");
-  assert.equal(await model.generate([{ role: "user", content: "compress moderator" }]), "[moderator, summary compressed]");
+  assert.equal(
+    (JSON.parse(await model.generate([{ role: "user", content: "moderator round 2" }])) as { roundSummary: string }).roundSummary,
+    "[moderator, round 2 summary]",
+  );
+  assert.equal(await model.generate([{ role: "user", content: "compress moderator round 2" }]), "[moderator, round 2 compressed]");
+  assert.equal(await model.generate([{ role: "user", content: "final summary" }]), "[moderator, final summary]");
 });
 
 test("createModels only requires keys for providers used by the session", () => {
@@ -255,6 +422,7 @@ test("createModels only requires keys for providers used by the session", () => 
       configDir: ".",
       topic: "A question",
       context: {},
+      maxRounds: 2,
       testMode: false,
       moderatorProvider: "deepseek",
       providers: {
@@ -306,6 +474,7 @@ test("createModels includes the compression provider when configured", () => {
       configDir: ".",
       topic: "A question",
       context: {},
+      maxRounds: 2,
       testMode: false,
       moderatorProvider: "deepseek",
       compressionProvider: "openai",
@@ -334,6 +503,59 @@ test("createModels includes the compression provider when configured", () => {
       delete process.env.OPENAI_API_KEY;
     } else {
       process.env.OPENAI_API_KEY = previousOpenAIKey;
+    }
+  }
+});
+
+test("createModels supports codex, claude, and openrouter provider types", () => {
+  const previousOpenAIKey = process.env.OPENAI_API_KEY;
+  const previousAnthropicKey = process.env.ANTHROPIC_API_KEY;
+  const previousOpenRouterKey = process.env.OPENROUTER_API_KEY;
+
+  process.env.OPENAI_API_KEY = "openai-key";
+  process.env.ANTHROPIC_API_KEY = "anthropic-key";
+  process.env.OPENROUTER_API_KEY = "openrouter-key";
+
+  try {
+    const config: LoadedSessionConfig = {
+      configPath: "config.json",
+      configDir: ".",
+      topic: "A question",
+      context: {},
+      maxRounds: 2,
+      testMode: false,
+      moderatorProvider: "codex",
+      compressionProvider: "openrouter",
+      providers: {
+        codex: { type: "codex", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+        claude: { type: "claude", model: "claude-sonnet-4-5", apiKeyEnv: "ANTHROPIC_API_KEY" },
+        openrouter: { type: "openrouter", model: "openai/gpt-5.5", apiKeyEnv: "OPENROUTER_API_KEY" },
+      },
+      minds: [{ id: "naval", name: "Naval", personaPath: "naval.md", provider: "claude" }],
+    };
+
+    const models = createModels(config);
+
+    assert.ok(models.codex instanceof OpenAIModel);
+    assert.ok(models.claude instanceof AnthropicModel);
+    assert.ok(models.openrouter instanceof OpenRouterModel);
+  } finally {
+    if (previousOpenAIKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = previousOpenAIKey;
+    }
+
+    if (previousAnthropicKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = previousAnthropicKey;
+    }
+
+    if (previousOpenRouterKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousOpenRouterKey;
     }
   }
 });

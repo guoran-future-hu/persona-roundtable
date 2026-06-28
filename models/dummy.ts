@@ -37,20 +37,29 @@ export function createDummyModels(config: LoadedSessionConfig): Record<string, C
     }
   }
 
-  for (const mind of config.minds) {
-    push(mind.provider, `[${mind.id}, round 1]`);
-    pushCompression(`[${mind.id}, round 1 compressed]`);
+  for (let roundNumber = 1; roundNumber <= config.maxRounds; roundNumber += 1) {
+    for (const mind of config.minds) {
+      push(mind.provider, `[${mind.id}, round ${roundNumber}]`);
+      pushCompression(`[${mind.id}, round ${roundNumber} compressed]`);
+    }
+
+    push(config.moderatorProvider, buildModeratorReview(roundNumber));
+    pushCompression(`[moderator, round ${roundNumber} compressed]`);
   }
 
-  for (const mind of config.minds) {
-    push(mind.provider, `[${mind.id}, round 2]`);
-    pushCompression(`[${mind.id}, round 2 compressed]`);
-  }
-
-  push(config.moderatorProvider, "[moderator, summary]");
-  pushCompression("[moderator, summary compressed]");
+  push(config.moderatorProvider, "[moderator, final summary]");
 
   return Object.fromEntries(
     Object.entries(queues).map(([providerName, responses]) => [providerName, new DummyModel(responses)]),
   );
+}
+
+function buildModeratorReview(roundNumber: number): string {
+  return JSON.stringify({
+    roundSummary: `[moderator, round ${roundNumber} summary]`,
+    progressNote: `[moderator, round ${roundNumber} progress]`,
+    comparisonToPrevious: roundNumber === 1 ? "No previous progress note." : `[moderator, round ${roundNumber} comparison]`,
+    decision: "continue",
+    endReason: "",
+  });
 }
