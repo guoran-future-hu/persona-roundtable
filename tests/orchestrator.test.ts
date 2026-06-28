@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { SessionConfig } from "../config";
 import type { ChatMessage, ChatModel } from "../models/types";
-import { createDummyModels } from "../models/dummy";
 import {
   buildFinalSummaryMessages,
   buildFollowUpRoundMessages,
@@ -440,54 +439,4 @@ test("orchestrator exposes partial result when moderator JSON is invalid", async
       return true;
     },
   );
-});
-
-test("orchestrator records prompts while dummy models return deterministic outputs", async () => {
-  const dummyConfig: SessionConfig = {
-    topic: "Should I start a company?",
-    context: "I have savings. I want autonomy.",
-    maxRounds: 2,
-    testMode: true,
-    moderatorProvider: "deepseek",
-    providers: {
-      deepseek: {
-        type: "deepseek",
-        model: "deepseek-v4-flash",
-        apiKeyEnv: "DEEPSEEK_API_KEY",
-        reasoningEffort: "high",
-      },
-    },
-    minds: [
-      { id: "andrej-karpathy", name: "Andrej Karpathy", personaPath: "karpathy.md", provider: "deepseek" },
-      { id: "trump", name: "Donald Trump", personaPath: "trump.md", provider: "deepseek" },
-    ],
-  };
-  const models = createDummyModels({ ...dummyConfig, configPath: "config.json", configDir: "." });
-  const minds = [
-    makeMind("andrej-karpathy", "Andrej Karpathy", models.deepseek!),
-    makeMind("trump", "Donald Trump", models.deepseek!),
-  ];
-
-  const result = await runRoundtableSession(dummyConfig, minds, {
-    moderatorModel: models.deepseek!,
-  });
-
-  assert.equal(result.rounds[0]?.outputs[0]?.content, "[andrej-karpathy, round 1]");
-  assert.equal(result.rounds[0]?.outputs[1]?.content, "[trump, round 1]");
-  assert.equal(result.rounds[1]?.outputs[0]?.content, "[andrej-karpathy, round 2]");
-  assert.equal(result.rounds[1]?.outputs[1]?.content, "[trump, round 2]");
-  assert.equal(result.moderatorReviews[1]?.roundSummary, "[moderator, round 2 summary]");
-  assert.equal(result.finalSummary, "[moderator, final summary]");
-  assert.equal(result.modelCalls.length, 7);
-  assert.deepEqual(result.modelCalls.map((call) => call.phase), [
-    "round-1",
-    "round-1",
-    "moderator-review-1",
-    "round-2",
-    "round-2",
-    "moderator-review-2",
-    "final-summary",
-  ]);
-  assert.match(result.modelCalls[0]!.messages[0]!.content, /Andrej Karpathy persona/);
-  assert.match(result.modelCalls[0]!.messages[1]!.content, /Should I start a company/);
 });

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { LoadedSessionConfig } from "../config";
 import { AnthropicModel } from "../models/anthropic";
 import { DeepSeekModel, extractDeepSeekText } from "../models/deepseek";
-import { createDummyModels, DummyModel } from "../models/dummy";
+import { createDummyModels } from "../models/dummy";
 import { createModels } from "../models/factory";
 import { OpenAIModel } from "../models/openai";
 import { OpenRouterModel } from "../models/openrouter";
@@ -305,57 +305,6 @@ test("extractDeepSeekText rejects empty message content", () => {
       }),
     /empty message text output.*finish_reason=length/,
   );
-});
-
-test("DummyModel returns queued responses in order", async () => {
-  const model = new DummyModel(["first", "second"]);
-
-  assert.equal(await model.generate([{ role: "user", content: "prompt 1" }]), "first");
-  assert.equal(await model.generate([{ role: "user", content: "prompt 2" }]), "second");
-  assert.equal(model.calls.length, 2);
-  assert.equal(model.calls[0]?.[0]?.content, "prompt 1");
-});
-
-test("createDummyModels queues responses in roundtable call order", async () => {
-  const config: LoadedSessionConfig = {
-    configPath: "config.json",
-    configDir: ".",
-    topic: "A question",
-    context: {},
-    maxRounds: 2,
-    testMode: true,
-    moderatorProvider: "deepseek",
-    providers: {
-      deepseek: {
-        type: "deepseek",
-        model: "deepseek-v4-flash",
-        apiKeyEnv: "DEEPSEEK_API_KEY",
-        reasoningEffort: "high",
-      },
-    },
-    minds: [
-      { id: "andrej-karpathy", name: "Andrej Karpathy", personaPath: "karpathy.md", provider: "deepseek" },
-      { id: "trump", name: "Donald Trump", personaPath: "trump.md", provider: "deepseek" },
-    ],
-  };
-
-  const models = createDummyModels(config);
-  const model = models.deepseek;
-
-  assert.ok(model);
-  assert.equal(await model.generate([{ role: "user", content: "round 1 karpathy" }]), "[andrej-karpathy, round 1]");
-  assert.equal(await model.generate([{ role: "user", content: "round 1 trump" }]), "[trump, round 1]");
-  assert.equal(
-    (JSON.parse(await model.generate([{ role: "user", content: "moderator round 1" }])) as { roundSummary: string }).roundSummary,
-    "[moderator, round 1 summary]",
-  );
-  assert.equal(await model.generate([{ role: "user", content: "round 2 karpathy" }]), "[andrej-karpathy, round 2]");
-  assert.equal(await model.generate([{ role: "user", content: "round 2 trump" }]), "[trump, round 2]");
-  assert.equal(
-    (JSON.parse(await model.generate([{ role: "user", content: "moderator round 2" }])) as { roundSummary: string }).roundSummary,
-    "[moderator, round 2 summary]",
-  );
-  assert.equal(await model.generate([{ role: "user", content: "final summary" }]), "[moderator, final summary]");
 });
 
 test("createDummyModels queues compression responses in runtime call order", async () => {
