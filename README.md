@@ -1,33 +1,8 @@
 # persona-roundtable
 
-persona-roundtable runs a discussion across multiple persona-driven minds.
+persona-roundtable is a CLI that runs one independent discussion session across multiple persona-driven minds.
 
-The MVP is a CLI. Each run is one independent session driven by `config.json`. Edit the config before each run.
-
-Richer context gives the minds more to work with. Put concrete background, definitions, assumptions, constraints, values, relevant history, and uncertainty into the free-form `context` field.
-
-## Quick Install
-
-```bash
-npm install
-```
-
-Create a local config and env file:
-
-```powershell
-Copy-Item config-example.json config.json
-Copy-Item .env.example .env
-```
-
-Edit `config.json` with your topic, context, minds, and provider choices. Then edit `.env` and fill in at least one provider key.
-
-Run a session:
-
-```bash
-npm run roundtable
-```
-
-The CLI prints progress and writes a markdown transcript under `sessions/`.
+Each run is driven by a JSON config. Edit the topic, context, minds, and providers before running. Richer context gives the minds more to work with, so put concrete background, definitions, assumptions, constraints, values, relevant history, and uncertainty in `context`.
 
 ## Setup
 
@@ -35,51 +10,81 @@ The CLI prints progress and writes a markdown transcript under `sessions/`.
 npm install
 ```
 
-Create a local env file:
+Create local files:
 
 ```powershell
+Copy-Item config-example.json config.json
 Copy-Item .env.example .env
 ```
 
-Then edit `.env` and fill in at least one provider key. The default example uses DeepSeek:
+Edit `.env` and fill in the API keys for the providers you actually use:
 
-```env
-DEEPSEEK_API_KEY=your_key_here
-```
-
-Do not commit `.env`. It is ignored by git.
-
-The example session uses DeepSeek `deepseek-v4-flash` with thinking enabled and `reasoningEffort: "high"`. DeepSeek supports `high` and `max`; set `reasoningEffort` in the JSON config. DeepSeek, Codex/OpenAI, Claude/Anthropic, and OpenRouter are available by changing provider fields in the JSON.
-
-## Run
+Edit `config.json` for the session you want to run, then start the CLI:
 
 ```bash
-Copy-Item config-example.json config.json
 npm run roundtable
 ```
 
-You can also pass a custom config path:
+The CLI prints progress and live output, then writes two files under `sessions/`:
+
+- `*.md`: reader-facing transcript
+- `*.dev.md`: development log with every LLM prompt and response
+
+Use a custom config path when you do not want to use `config.json`:
 
 ```bash
 npm run roundtable -- --config path/to/config.json
 ```
 
-## Session Config
+For a dry deterministic run that does not call provider APIs, set `testMode: true` in the config or use:
 
-`config-example.json` is the config template. Copy it to `config.json` for local runs. It contains:
+```bash
+npm run roundtable -- --test-mode
+```
 
-- `topic`: the question for the roundtable
-- `context`: free-form rich background for the session
-- `maxRounds`: required positive integer hard cap for discussion rounds
-- `workingLanguage`: free-form language instruction injected into every prompt
-- `globalMindsProvider`: default provider for minds that do not specify one
-- `moderatorProvider`: provider for moderator progress reviews
-- `compressionProvider`: optional provider for live compressed CLI monitoring output
-- `providers`: DeepSeek, Codex/OpenAI, Claude/Anthropic, or OpenRouter provider definitions
-- `minds`: the personas participating in this session
-- `disabledMinds`: optional parking lot for personas you want to keep in the JSON but not run
+## Config
 
-With `globalMindsProvider` set, each mind entry only needs:
+`config-example.json` is the template. Copy it to `config.json` for local runs.
+
+| Field | Behavior |
+| --- | --- |
+| `topic` | Required question or topic for the session. Injected into every prompt. |
+| `context` | Required free-form background. Strings are passed through directly; objects/arrays are pretty-printed as JSON. |
+| `maxRounds` | Required positive integer. Hard cap on discussion rounds. |
+| `testMode` | Optional boolean, default `false`. When `true`, uses deterministic dummy models and does not require API keys. CLI flag `--test-mode` also forces this on for one run. |
+| `workingLanguage` | Optional free-form instruction injected into every prompt. If omitted, the app asks models to use the user's language unless the persona has a stronger reason not to. |
+| `globalMindsProvider` | Optional provider name used by active minds that do not set their own `provider`. Omit it, set it to `null`, or set it to `"none"` to require each mind to specify `provider`. |
+| `moderatorProvider` | Required provider name for moderator progress reviews and the final summary. Must exist in `providers`. |
+| `compressionProvider` | Optional provider name for live compressed CLI monitoring output. Omit it, set it to `null`, or set it to `"none"` to print full live outputs instead. |
+| `providers` | Required map of named provider configs. Only providers used by the moderator, active minds, and compression are instantiated. |
+| `minds` | Required non-empty list of active personas. Each entry points at a persona `SKILL.md`. |
+| `disabledMinds` | Optional list of personas kept in the file but not run. Empty arrays are allowed. |
+
+### Providers
+
+A provider entry names a model backend and the environment variable that contains its API key:
+
+```json
+"deepseek-pro": {
+  "type": "deepseek",
+  "model": "deepseek-v4-pro",
+  "apiKeyEnv": "DEEPSEEK_API_KEY",
+  "reasoningEffort": "max"
+}
+```
+
+Supported `type` values:
+
+- `deepseek`
+- `openai` or `codex`
+- `anthropic` or `claude`
+- `openrouter`
+
+`reasoningEffort` is used by DeepSeek and must be `"high"` or `"max"` when present. If omitted for DeepSeek, it defaults to `"high"`.
+
+### Minds
+
+With `globalMindsProvider` set, an active mind can be just:
 
 ```json
 {
@@ -87,7 +92,14 @@ With `globalMindsProvider` set, each mind entry only needs:
 }
 ```
 
-Set `provider` on a mind only when it should override `globalMindsProvider`.
+Set `provider` on a mind only when it should override `globalMindsProvider`:
+
+```json
+{
+  "personaPath": "agents/naval/SKILL.md",
+  "provider": "claude"
+}
+```
 
 The persona folder must include `persona.json` beside `SKILL.md`:
 
@@ -98,16 +110,20 @@ The persona folder must include `persona.json` beside `SKILL.md`:
 }
 ```
 
-After each round, the moderator writes a short structured progress review. The discussion continues until it reaches `maxRounds` or the moderator detects that the minds are circling the same semantic points and ends the discussion.
+## Runtime Behavior
 
-Set `compressionProvider` to any configured provider name to print a compressed version of every generated speaker response and moderator review while the run is in progress. These compressed summaries are for CLI monitoring and are not added to the reader-facing transcript.
+Round 1 asks every active mind for its initial view. Later rounds give each mind the previous rounds and moderator progress notes so they can respond, revise, or clarify.
 
-Change the JSON for every new session. There is no cross-session memory in the MVP.
+After each round, the moderator returns a structured JSON progress review. The discussion stops when:
 
-Each run writes two files under `sessions/`:
+- `maxRounds` is reached, or
+- after round 1, the moderator returns `decision: "end_discussion"`.
 
-- `*.md`: reader-facing transcript
-- `*.dev.md`: development log with every LLM prompt and response
+The moderator always produces a final summary after the discussion stops. The final summary is printed as-is, even when `compressionProvider` is enabled.
+
+`compressionProvider` only controls live CLI monitoring output. It compresses generated speaker responses and moderator reviews while the run is in progress. Compressed text is not added to the reader-facing transcript; the full raw calls remain in the dev log.
+
+There is no cross-session memory. Change the JSON for every new session.
 
 ## Prompt Templates
 

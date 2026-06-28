@@ -24,7 +24,7 @@ async function main(): Promise<void> {
   console.log("Richer context gives the minds more to work with; edit the context fields in the session JSON before running.");
 
   const loadedConfig = await loadSessionConfig(configPath);
-  const config = args.testMode === undefined ? loadedConfig : { ...loadedConfig, testMode: args.testMode };
+  const config = args.testMode ? { ...loadedConfig, testMode: true } : loadedConfig;
   const models = config.testMode ? createDummyModels(config) : createModels(config);
   const minds = await loadMinds(config, models);
   const moderatorModel = models[config.moderatorProvider];
@@ -93,11 +93,6 @@ function parseArgs(args: string[]): { config?: string; help: boolean; testMode?:
       continue;
     }
 
-    if (arg === "--no-test-mode") {
-      parsed.testMode = false;
-      continue;
-    }
-
     throw new Error(`Unknown argument: ${arg}`);
   }
 
@@ -110,10 +105,9 @@ function printHelp(): void {
 Usage:
   npm run roundtable -- --config config.json
   npm run roundtable -- --config config.json --test-mode
-  npm run roundtable -- --config config.json --no-test-mode
 
 The JSON config is the single source of truth for a session. Put the topic and rich context there.
-Use --test-mode or --no-test-mode to override config.json for a single run.
+Use --test-mode to force deterministic dummy models for a single run.
 Richer context gives the minds more to work with: goals, constraints, values, history, and current circumstances.
 `);
 }
