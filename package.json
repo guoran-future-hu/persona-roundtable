@@ -6,6 +6,7 @@
   "scripts": {
     "roundtable": "tsx app.ts",
     "check:encoding": "tsx scripts/check-encoding.ts",
+    "check:openrouter": "tsx scripts/check-openrouter-key.ts",
     "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
