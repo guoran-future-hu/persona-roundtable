@@ -2,6 +2,7 @@
   "topic": "Do AI have consciousness",
   "context": "There are different definition of cousciousness, it is under active debate in cog sci. ther are prob multiple angles to approach this question, most inportantly how do you define consciousness, its component or function",
   "maxRounds": 5,
+  "discussionMode": "simple",
   "testMode": false,
   "workingLanguage": "chinese",
   "globalMindsProvider": "deepseek-pro",

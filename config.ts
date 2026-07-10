@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import { readUtf8Text } from "./text-io";
 
 export type ProviderType = "openai" | "codex" | "anthropic" | "claude" | "deepseek" | "openrouter";
+export type DiscussionMode = "simple" | "dynamic";
 
 export interface ProviderConfig {
   type: ProviderType;
@@ -26,6 +27,8 @@ export interface SessionConfig {
   topic: string;
   context: unknown;
   maxRounds: number;
+  discussionMode?: DiscussionMode;
+  maxTurns?: number;
   testMode: boolean;
   workingLanguage?: string;
   globalMindsProvider?: string;
@@ -52,12 +55,14 @@ export async function loadSessionConfig(configPath: string): Promise<LoadedSessi
   const parsed = JSON.parse(raw) as unknown;
   const config = parseSessionConfig(parsed);
   const configDir = dirname(absolutePath);
+  const context = await loadContext(config.context, configDir);
   const minds = await loadMindConfigs(config.minds, configDir, "minds");
   const disabledMinds =
     config.disabledMinds === undefined ? undefined : await loadMindConfigs(config.disabledMinds, configDir, "disabledMinds");
 
   return {
     ...config,
+    context,
     minds,
     disabledMinds,
     configPath: absolutePath,
@@ -65,6 +70,13 @@ export async function loadSessionConfig(configPath: string): Promise<LoadedSessi
   };
 }
 
+async function loadContext(context: unknown, configDir: string): Promise<unknown> {
+  if (typeof context !== "string" || !context.toLowerCase().endsWith(".md")) {
+    return context;
+  }
+
+  return readUtf8Text(resolve(configDir, context));
+}
 export function parseSessionConfig(value: unknown): ParsedSessionConfig {
   const config = expectRecord(value, "session config");
 
@@ -73,6 +85,8 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     throw new Error("session config must include context");
   }
   const maxRounds = expectPositiveInteger(config.maxRounds, "maxRounds");
+  const discussionMode = parseDiscussionMode(config.discussionMode);
+  const maxTurns = parseOptionalPositiveInteger(config.maxTurns, "maxTurns");
   const testMode = config.testMode === undefined ? false : expectBoolean(config.testMode, "testMode");
   const workingLanguage =
     config.workingLanguage === undefined ? undefined : expectString(config.workingLanguage, "workingLanguage");
@@ -86,6 +100,14 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     config.disabledMinds === undefined
       ? undefined
       : parseMinds(config.disabledMinds, "disabledMinds", { allowEmpty: true, defaultProvider: globalMindsProvider });
+
+  if (discussionMode === "dynamic" && minds.length < 3) {
+    throw new Error("dynamic discussionMode requires at least three active minds");
+  }
+
+  if (discussionMode === "dynamic" && maxTurns !== undefined && maxTurns < minds.length) {
+    throw new Error(`maxTurns (${maxTurns}) must be at least the active mind count (${minds.length}) in dynamic mode`);
+  }
 
   if (globalMindsProvider !== undefined && !providers[globalMindsProvider]) {
     throw new Error(`globalMindsProvider '${globalMindsProvider}' is not defined in providers`);
@@ -115,6 +137,8 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     topic,
     context: config.context,
     maxRounds,
+    discussionMode,
+    maxTurns,
     testMode,
     workingLanguage,
     globalMindsProvider,
@@ -124,6 +148,26 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     minds,
     disabledMinds,
   };
+}
+
+function parseDiscussionMode(value: unknown): DiscussionMode {
+  if (value === undefined || value === null) {
+    return "simple";
+  }
+
+  if (value === "simple" || value === "dynamic") {
+    return value;
+  }
+
+  throw new Error("discussionMode must be 'simple' or 'dynamic'");
+}
+
+function parseOptionalPositiveInteger(value: unknown, label: string): number | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  return expectPositiveInteger(value, label);
 }
 
 function parseProviders(value: unknown): Record<string, ProviderConfig> {

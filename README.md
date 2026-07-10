@@ -49,8 +49,10 @@ npm run roundtable -- --test-mode
 | Field | Behavior |
 | --- | --- |
 | `topic` | Required question or topic for the session. Injected into every prompt. |
-| `context` | Required free-form background. Strings are passed through directly; objects/arrays are pretty-printed as JSON. |
-| `maxRounds` | Required positive integer. Hard cap on discussion rounds. |
+| `context` | Required free-form background. Strings are passed through directly, except a string ending in `.md`, which is loaded as a UTF-8 Markdown file relative to the session config; its content and line breaks are preserved. Objects/arrays are pretty-printed as JSON. |
+| `maxRounds` | Required positive integer. Hard cap in simple mode; in dynamic mode it computes the fallback turn cap. |
+| `discussionMode` | Optional `"simple"` or `"dynamic"`, default `"simple"`. Dynamic mode enables invitations and urgency scheduling after round 1. |
+| `maxTurns` | Optional positive integer or `null`, used only in dynamic mode. Counts all mind speeches including round-1 openings. Defaults to `maxRounds * active mind count`. |
 | `testMode` | Optional boolean, default `false`. When `true`, uses deterministic dummy models and does not require API keys. CLI flag `--test-mode` also forces this on for one run. |
 | `workingLanguage` | Optional free-form instruction injected into every prompt. If omitted, the app asks models to use the user's language unless the persona has a stronger reason not to. |
 | `globalMindsProvider` | Optional provider name used by active minds that do not set their own `provider`. Omit it, set it to `null`, or set it to `"none"` to require each mind to specify `provider`. |
@@ -112,14 +114,24 @@ The persona folder must include `persona.json` beside `SKILL.md`:
 
 ## Runtime Behavior
 
-Round 1 asks every active mind for its initial view. Later rounds give each mind the previous rounds and moderator progress notes so they can respond, revise, or clarify.
+### Simple mode
+
+Simple mode is the default and preserves the original behavior. Round 1 asks every active mind for its initial view. Later rounds give each mind the previous rounds and moderator progress notes so they can respond, revise, or clarify.
 
 After each round, the moderator returns a structured JSON progress review. The discussion stops when:
 
 - `maxRounds` is reached, or
 - after round 1, the moderator returns `decision: "end_discussion"`.
 
-The moderator always produces a final summary after the discussion stops. The final summary is printed as-is, even when `compressionProvider` is enabled.
+### Dynamic mode
+
+Set `"discussionMode": "dynamic"` and configure at least three active minds. Round 1 remains a fixed-order opening round with no invitations, urgency checks, or moderator interruption.
+
+After round 1, each selected mind returns its response and may invite one other mind. The moderator makes a short decision after every speech, but generally produces a checkpoint summary only once per active-mind-count of speeches; it may summarize earlier or later as the discussion changes. If the moderator continues, an invitation selects the next speaker. Without an invitation, every other mind reports `no_new_comment`, `minor_update`, or `strong_need_to_respond`; the highest urgency wins, with ties resolved by `minds` order.
+
+Dynamic discussion stops when the moderator ends it, every eligible mind reports no new comment, or the effective turn cap is reached. `maxTurns` counts the opening speeches. If omitted, the cap is `maxRounds * active mind count`. Urgency polling can add one model call per other mind after an uninvited speech, and the moderator receives one short decision call after every post-opening speech.
+
+Both modes always produce a final moderator summary. The final summary is printed as-is, even when `compressionProvider` is enabled.
 
 `compressionProvider` only controls live CLI monitoring output. It compresses generated speaker responses and moderator reviews while the run is in progress. Compressed text is not added to the reader-facing transcript; the full raw calls remain in the dev log.
 
@@ -131,7 +143,10 @@ The predetermined prompt structures live in `prompts/`:
 
 - `prompts/round1.md`: initial opinion prompt
 - `prompts/follow-up-round.md`: cross-commentary and updated opinion prompt for rounds after the first
-- `prompts/moderator.md`: structured moderator progress review prompt
+- `prompts/moderator.md`: structured simple-mode moderator progress review prompt
+- `prompts/dynamic-turn.md`: structured dynamic response and optional invitation prompt
+- `prompts/urgency.md`: short dynamic speaking-urgency prompt
+- `prompts/dynamic-moderator.md`: adaptive moderator decision and checkpoint prompt
 - `prompts/final-summary.md`: final moderator synthesis prompt
 - `prompts/compression.md`: live CLI monitoring compression prompt
 

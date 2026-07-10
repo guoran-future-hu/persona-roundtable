@@ -20,6 +20,8 @@ Persona:
 </system>
 
 <user>
+The user wish to discuss the following question or topic:
+
 Question:
 {{topic}}
 

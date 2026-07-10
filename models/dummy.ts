@@ -24,6 +24,10 @@ export class DummyModel implements ChatModel {
 }
 
 export function createDummyModels(config: LoadedSessionConfig): Record<string, ChatModel> {
+  if ((config.discussionMode ?? "simple") === "dynamic") {
+    return createDynamicDummyModels(config);
+  }
+
   const queues: Record<string, string[]> = {};
 
   function push(providerName: string, response: string): void {
@@ -45,6 +49,63 @@ export function createDummyModels(config: LoadedSessionConfig): Record<string, C
 
     push(config.moderatorProvider, buildModeratorReview(roundNumber));
     pushCompression(`[moderator, round ${roundNumber} compressed]`);
+  }
+
+  push(config.moderatorProvider, "[moderator, final summary]");
+
+  return Object.fromEntries(
+    Object.entries(queues).map(([providerName, responses]) => [providerName, new DummyModel(responses)]),
+  );
+}
+
+function createDynamicDummyModels(config: LoadedSessionConfig): Record<string, ChatModel> {
+  const queues: Record<string, string[]> = {};
+
+  function push(providerName: string, response: string): void {
+    queues[providerName] ??= [];
+    queues[providerName].push(response);
+  }
+
+  function pushCompression(response: string): void {
+    if (config.compressionProvider !== undefined) {
+      push(config.compressionProvider, response);
+    }
+  }
+
+  for (const mind of config.minds) {
+    push(mind.provider, "[" + mind.id + ", opening]");
+    pushCompression("[" + mind.id + ", opening compressed]");
+  }
+
+  push(config.moderatorProvider, buildModeratorReview(1));
+  pushCompression("[moderator, opening compressed]");
+
+  const effectiveMaxTurns = config.maxTurns ?? config.maxRounds * config.minds.length;
+  if (effectiveMaxTurns > config.minds.length) {
+    const eligibleMinds = config.minds.slice(0, -1);
+    for (const [index, mind] of eligibleMinds.entries()) {
+      push(
+        mind.provider,
+        JSON.stringify({ urgency: index === 0 ? "minor_update" : "no_new_comment" }),
+      );
+    }
+
+    const selectedMind = eligibleMinds[0]!;
+    push(
+      selectedMind.provider,
+      JSON.stringify({ content: "[" + selectedMind.id + ", dynamic turn]", inviteMindId: null }),
+    );
+    pushCompression("[" + selectedMind.id + ", dynamic turn compressed]");
+    push(
+      config.moderatorProvider,
+      JSON.stringify({
+        action: "end_discussion",
+        checkpointSummary: "",
+        progressNote: "",
+        comparisonToPrevious: "",
+        endReason: "[moderator, deterministic dynamic stop]",
+      }),
+    );
   }
 
   push(config.moderatorProvider, "[moderator, final summary]");

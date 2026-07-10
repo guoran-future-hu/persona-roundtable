@@ -7,7 +7,10 @@ import {
   buildFollowUpRoundMessages,
   buildModeratorMessages,
   buildRoundOneMessages,
+  parseDynamicModeratorCheck,
+  parseDynamicSpeakerResponse,
   parseModeratorReview,
+  parseUrgencyResponse,
   runRoundtableSession,
   SessionRunError,
   type CompressedOutput,
@@ -436,6 +439,295 @@ test("orchestrator exposes partial result when moderator JSON is invalid", async
       assert.equal(error.partialResult.moderatorReviews.length, 0);
       assert.equal(error.partialResult.modelCalls[1]?.phase, "moderator-review-1");
       assert.equal(error.partialResult.modelCalls[1]?.response, "not json");
+      return true;
+    },
+  );
+});
+
+function dynamicCheck(
+  action: "continue" | "summarize" | "end_discussion",
+  fields: Partial<{
+    checkpointSummary: string;
+    progressNote: string;
+    comparisonToPrevious: string;
+    endReason: string;
+  }> = {},
+): string {
+  return JSON.stringify({
+    action,
+    checkpointSummary: fields.checkpointSummary ?? "",
+    progressNote: fields.progressNote ?? "",
+    comparisonToPrevious: fields.comparisonToPrevious ?? "",
+    endReason: fields.endReason ?? "",
+  });
+}
+
+test("dynamic mode uses urgency, honors invitations, and lets the moderator end before scheduling", async () => {
+  const dynamicConfig: SessionConfig = {
+    ...config,
+    discussionMode: "dynamic",
+    maxTurns: 8,
+  };
+  const alphaModel = new FakeModel("Alpha", [
+    "alpha opening",
+    JSON.stringify({ urgency: "strong_need_to_respond" }),
+    JSON.stringify({ content: "alpha response", inviteMindId: "beta" }),
+  ]);
+  const betaModel = new FakeModel("Beta", [
+    "beta opening",
+    JSON.stringify({ urgency: "minor_update" }),
+    JSON.stringify({ content: "beta invited response", inviteMindId: null }),
+  ]);
+  const gammaModel = new FakeModel("Gamma", ["gamma opening"]);
+  const moderatorModel = new FakeModel("Moderator", [
+    review(1),
+    dynamicCheck("continue"),
+    dynamicCheck("end_discussion", { endReason: "Enough evidence." }),
+    "dynamic final summary",
+  ]);
+  const compressionModel = new FakeModel("Compression");
+  const minds = [
+    makeMind("alpha", "Alpha", alphaModel),
+    makeMind("beta", "Beta", betaModel),
+    makeMind("gamma", "Gamma", gammaModel),
+  ];
+
+  const result = await runRoundtableSession(dynamicConfig, minds, { moderatorModel, compressionModel });
+
+  assert.equal(result.discussionMode, "dynamic");
+  assert.equal(result.effectiveMaxTurns, 8);
+  assert.deepEqual(result.rounds[0]?.outputs.map((output) => output.mindName), ["Alpha", "Beta", "Gamma"]);
+  assert.equal(result.urgencyPolls.length, 1);
+  assert.deepEqual(
+    result.urgencyPolls[0]?.signals.map((signal) => [signal.mindId, signal.urgency]),
+    [
+      ["alpha", "strong_need_to_respond"],
+      ["beta", "minor_update"],
+    ],
+  );
+  assert.equal(result.urgencyPolls[0]?.selectedMindId, "alpha");
+  assert.deepEqual(
+    result.dynamicTurns.map((turn) => ({
+      speaker: turn.mindId,
+      method: turn.selectionMethod,
+      invite: turn.inviteMindId,
+      invitedBy: turn.invitedByMindId,
+    })),
+    [
+      { speaker: "alpha", method: "urgency", invite: "beta", invitedBy: undefined },
+      { speaker: "beta", method: "invitation", invite: null, invitedBy: "alpha" },
+    ],
+  );
+  assert.deepEqual(result.dynamicModeratorChecks.map((check) => check.action), ["continue", "end_discussion"]);
+  assert.equal(result.stopReason, "Enough evidence.");
+  assert.equal(result.finalSummary, "dynamic final summary");
+  assert.equal(alphaModel.options[1]?.maxOutputTokens, 128);
+  assert.equal(alphaModel.options[1]?.thinkingEnabled, false);
+  assert.equal(compressionModel.calls.length, 6);
+  assert.equal(result.modelCalls.filter((call) => call.phase === "compression").length, 6);
+  assert.match(moderatorModel.calls[1]![0]!.content, /one checkpoint summary per 3 post-opening speeches/);
+  assert.match(moderatorModel.calls[2]![1]!.content, /alpha response/);
+  assert.match(moderatorModel.calls[2]![1]!.content, /beta invited response/);
+
+  const transcript = renderTranscript(
+    {
+      ...dynamicConfig,
+      minds: [
+        { id: "alpha", name: "Alpha", personaPath: "alpha.md", provider: "fake" },
+        { id: "beta", name: "Beta", personaPath: "beta.md", provider: "fake" },
+        { id: "gamma", name: "Gamma", personaPath: "gamma.md", provider: "fake" },
+      ],
+    },
+    result,
+  );
+  assert.match(transcript, /### Urgency Poll After Turn 3/);
+  assert.match(transcript, /Alpha: strong_need_to_respond/);
+  assert.match(transcript, /## Turn 4: Alpha/);
+  assert.ok(transcript.includes("Invitation: Beta (beta)"));
+  assert.match(transcript, /Selected by: invited by Alpha/);
+  assert.match(transcript, /Action: end_discussion/);
+});
+
+test("dynamic moderator checkpoints reset cadence and all-quiet urgency ends the session", async () => {
+  const dynamicConfig: SessionConfig = {
+    ...config,
+    discussionMode: "dynamic",
+    maxTurns: 7,
+  };
+  const alphaModel = new FakeModel("Alpha", [
+    "alpha opening",
+    JSON.stringify({ urgency: "minor_update" }),
+    JSON.stringify({ urgency: "no_new_comment" }),
+  ]);
+  const betaModel = new FakeModel("Beta", [
+    "beta opening",
+    JSON.stringify({ urgency: "strong_need_to_respond" }),
+    JSON.stringify({ content: "beta response", inviteMindId: null }),
+  ]);
+  const gammaModel = new FakeModel("Gamma", [
+    "gamma opening",
+    JSON.stringify({ urgency: "no_new_comment" }),
+  ]);
+  const moderatorModel = new FakeModel("Moderator", [
+    review(1),
+    dynamicCheck("summarize", {
+      checkpointSummary: "new checkpoint",
+      progressNote: "meaningful progress",
+      comparisonToPrevious: "sharper disagreement",
+    }),
+    "quiet final summary",
+  ]);
+  const minds = [
+    makeMind("alpha", "Alpha", alphaModel),
+    makeMind("beta", "Beta", betaModel),
+    makeMind("gamma", "Gamma", gammaModel),
+  ];
+
+  const result = await runRoundtableSession(dynamicConfig, minds, { moderatorModel });
+
+  assert.equal(result.dynamicTurns.length, 1);
+  assert.equal(result.dynamicTurns[0]?.mindId, "beta");
+  assert.equal(result.dynamicModeratorChecks[0]?.action, "summarize");
+  assert.equal(result.dynamicModeratorChecks[0]?.turnsSinceCheckpoint, 1);
+  assert.equal(result.moderatorReviews.length, 2);
+  assert.equal(result.moderatorReviews[1]?.roundSummary, "new checkpoint");
+  assert.equal(result.urgencyPolls.length, 2);
+  assert.equal(result.urgencyPolls[1]?.selectedMindId, undefined);
+  assert.equal(result.stopReason, "All other minds reported no new comment.");
+  assert.equal(result.finalSummary, "quiet final summary");
+
+  const transcript = renderTranscript(
+    {
+      ...dynamicConfig,
+      minds: [
+        { id: "alpha", name: "Alpha", personaPath: "alpha.md", provider: "fake" },
+        { id: "beta", name: "Beta", personaPath: "beta.md", provider: "fake" },
+        { id: "gamma", name: "Gamma", personaPath: "gamma.md", provider: "fake" },
+      ],
+    },
+    result,
+  );
+  assert.match(transcript, /Checkpoint summary: new checkpoint/);
+  assert.match(transcript, /Next speaker: None/);
+});
+
+test("dynamic mode applies explicit opening-inclusive caps and computes fallback caps", async () => {
+  const cappedConfig: SessionConfig = {
+    ...config,
+    discussionMode: "dynamic",
+    maxTurns: 3,
+  };
+  const cappedMinds = [
+    makeMind("alpha", "Alpha", new FakeModel("Alpha", ["alpha opening"])),
+    makeMind("beta", "Beta", new FakeModel("Beta", ["beta opening"])),
+    makeMind("gamma", "Gamma", new FakeModel("Gamma", ["gamma opening"])),
+  ];
+  const cappedResult = await runRoundtableSession(cappedConfig, cappedMinds, {
+    moderatorModel: new FakeModel("Moderator", [review(1), "capped final"]),
+  });
+
+  assert.equal(cappedResult.effectiveMaxTurns, 3);
+  assert.equal(cappedResult.stopReason, "Reached maxTurns (3).");
+  assert.equal(cappedResult.urgencyPolls.length, 0);
+
+  const fallbackConfig: SessionConfig = {
+    ...config,
+    discussionMode: "dynamic",
+    maxRounds: 2,
+    maxTurns: undefined,
+  };
+  const fallbackMinds = [
+    makeMind("alpha", "Alpha", new FakeModel("Alpha", [
+      "alpha opening",
+      JSON.stringify({ urgency: "no_new_comment" }),
+    ])),
+    makeMind("beta", "Beta", new FakeModel("Beta", [
+      "beta opening",
+      JSON.stringify({ urgency: "no_new_comment" }),
+    ])),
+    makeMind("gamma", "Gamma", new FakeModel("Gamma", ["gamma opening"])),
+  ];
+  const fallbackResult = await runRoundtableSession(fallbackConfig, fallbackMinds, {
+    moderatorModel: new FakeModel("Moderator", [review(1), "fallback final"]),
+  });
+
+  assert.equal(fallbackResult.effectiveMaxTurns, 6);
+  assert.equal(fallbackResult.stopReason, "All other minds reported no new comment.");
+});
+
+test("dynamic structured response parsers reject invalid scheduling data", () => {
+  const minds = [
+    { id: "alpha", name: "Alpha" },
+    { id: "beta", name: "Beta" },
+    { id: "gamma", name: "Gamma" },
+  ];
+
+  assert.throws(
+    () =>
+      parseDynamicSpeakerResponse(
+        JSON.stringify({ content: "response", inviteMindId: "alpha" }),
+        4,
+        minds[0]!,
+        minds,
+      ),
+    /cannot invite the current mind/,
+  );
+  assert.throws(
+    () =>
+      parseDynamicSpeakerResponse(
+        JSON.stringify({ content: "response", inviteMindId: "missing" }),
+        4,
+        minds[0]!,
+        minds,
+      ),
+    /invited unknown mind ID/,
+  );
+  assert.throws(
+    () => parseUrgencyResponse(JSON.stringify({ urgency: "urgent" }), 3, minds[0]!),
+    /invalid urgency/,
+  );
+  assert.throws(
+    () => parseDynamicModeratorCheck(dynamicCheck("continue", { checkpointSummary: "unexpected" }), 4, 1),
+    /requires empty summary and end fields/,
+  );
+  assert.throws(
+    () => parseDynamicModeratorCheck(dynamicCheck("summarize"), 4, 1),
+    /requires summary fields/,
+  );
+});
+test("dynamic mode preserves scheduling state when a structured speech is invalid", async () => {
+  const dynamicConfig: SessionConfig = {
+    ...config,
+    discussionMode: "dynamic",
+    maxTurns: 6,
+  };
+  const minds = [
+    makeMind("alpha", "Alpha", new FakeModel("Alpha", [
+      "alpha opening",
+      JSON.stringify({ urgency: "strong_need_to_respond" }),
+      "not json",
+    ])),
+    makeMind("beta", "Beta", new FakeModel("Beta", [
+      "beta opening",
+      JSON.stringify({ urgency: "minor_update" }),
+    ])),
+    makeMind("gamma", "Gamma", new FakeModel("Gamma", ["gamma opening"])),
+  ];
+
+  await assert.rejects(
+    async () =>
+      runRoundtableSession(dynamicConfig, minds, {
+        moderatorModel: new FakeModel("Moderator", [review(1)]),
+      }),
+    (error: unknown) => {
+      assert.ok(error instanceof SessionRunError);
+      assert.match(error.message, /Dynamic response for turn 4 was not valid JSON/);
+      assert.equal(error.partialResult.rounds.length, 1);
+      assert.equal(error.partialResult.urgencyPolls.length, 1);
+      assert.equal(error.partialResult.urgencyPolls[0]?.selectedMindId, "alpha");
+      assert.equal(error.partialResult.dynamicTurns.length, 0);
+      assert.equal(error.partialResult.modelCalls.at(-1)?.phase, "dynamic-turn-4");
+      assert.equal(error.partialResult.modelCalls.at(-1)?.response, "not json");
       return true;
     },
   );

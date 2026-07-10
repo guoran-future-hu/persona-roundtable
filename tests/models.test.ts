@@ -508,3 +508,62 @@ test("createModels supports codex, claude, and openrouter provider types", () =>
     }
   }
 });
+
+test("createDummyModels produces a complete deterministic dynamic-mode route", async () => {
+  const config: LoadedSessionConfig = {
+    configPath: "config.json",
+    configDir: ".",
+    topic: "A question",
+    context: {},
+    maxRounds: 2,
+    discussionMode: "dynamic",
+    maxTurns: 5,
+    testMode: true,
+    moderatorProvider: "moderator",
+    providers: {
+      alpha: { type: "openai", model: "fake", apiKeyEnv: "ALPHA_KEY" },
+      beta: { type: "openai", model: "fake", apiKeyEnv: "BETA_KEY" },
+      gamma: { type: "openai", model: "fake", apiKeyEnv: "GAMMA_KEY" },
+      moderator: { type: "openai", model: "fake", apiKeyEnv: "MODERATOR_KEY" },
+    },
+    minds: [
+      { id: "alpha", name: "Alpha", personaPath: "alpha.md", provider: "alpha" },
+      { id: "beta", name: "Beta", personaPath: "beta.md", provider: "beta" },
+      { id: "gamma", name: "Gamma", personaPath: "gamma.md", provider: "gamma" },
+    ],
+  };
+
+  const models = createDummyModels(config);
+  assert.equal(await models.alpha!.generate([{ role: "user", content: "opening" }]), "[alpha, opening]");
+  assert.equal(await models.beta!.generate([{ role: "user", content: "opening" }]), "[beta, opening]");
+  assert.equal(await models.gamma!.generate([{ role: "user", content: "opening" }]), "[gamma, opening]");
+
+  const openingReview = JSON.parse(
+    await models.moderator!.generate([{ role: "user", content: "opening review" }]),
+  ) as { decision: string };
+  assert.equal(openingReview.decision, "continue");
+
+  const alphaUrgency = JSON.parse(
+    await models.alpha!.generate([{ role: "user", content: "urgency" }]),
+  ) as { urgency: string };
+  const betaUrgency = JSON.parse(
+    await models.beta!.generate([{ role: "user", content: "urgency" }]),
+  ) as { urgency: string };
+  assert.equal(alphaUrgency.urgency, "minor_update");
+  assert.equal(betaUrgency.urgency, "no_new_comment");
+
+  const dynamicTurn = JSON.parse(
+    await models.alpha!.generate([{ role: "user", content: "dynamic turn" }]),
+  ) as { content: string; inviteMindId: string | null };
+  assert.equal(dynamicTurn.content, "[alpha, dynamic turn]");
+  assert.equal(dynamicTurn.inviteMindId, null);
+
+  const moderatorCheck = JSON.parse(
+    await models.moderator!.generate([{ role: "user", content: "moderator check" }]),
+  ) as { action: string };
+  assert.equal(moderatorCheck.action, "end_discussion");
+  assert.equal(
+    await models.moderator!.generate([{ role: "user", content: "final summary" }]),
+    "[moderator, final summary]",
+  );
+});

@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { MindConfig, SessionConfig } from "./config";
 import type { ModelCallLog, ModeratorReview, RoundOutput, RoundResult, SessionResult } from "./orchestrator";
-import { formatModeratorReview, serializeContext } from "./orchestrator";
+import { formatDynamicModeratorCheck, formatModeratorReview, serializeContext } from "./orchestrator";
 import { writeUtf8Text } from "./text-io";
 
 export interface SavedSessionPaths {
@@ -52,7 +52,9 @@ export function renderTranscript(config: SessionConfig, result: SessionResult, c
     "",
     formatMinds(config.minds),
     "",
-    formatRounds(result.rounds, result.moderatorReviews),
+    result.discussionMode === "dynamic"
+      ? formatDynamicDiscussion(config, result)
+      : formatRounds(result.rounds, result.moderatorReviews),
     ...formatFinalSummary(result.finalSummary),
     "## Stop Reason",
     "",
@@ -76,6 +78,9 @@ export function renderDevLog(config: SessionConfig, result: SessionResult, creat
         topic: config.topic,
         context: config.context,
         maxRounds: config.maxRounds,
+        discussionMode: config.discussionMode ?? "simple",
+        maxTurns: config.maxTurns,
+        effectiveMaxTurns: result.effectiveMaxTurns,
         testMode: config.testMode,
         workingLanguage: config.workingLanguage,
         globalMindsProvider: config.globalMindsProvider,
@@ -90,6 +95,7 @@ export function renderDevLog(config: SessionConfig, result: SessionResult, creat
     "```",
     "",
     ...formatRunError(result.error),
+    ...formatDynamicState(result),
     "## Model Calls",
     "",
     result.modelCalls.map(formatModelCall).join("\n\n"),
@@ -119,6 +125,109 @@ function formatMinds(minds: MindConfig[]): string {
 
 function formatOutputs(outputs: RoundOutput[]): string {
   return outputs.map((output) => `### ${output.mindName}\n\n${output.content}`).join("\n\n");
+}
+
+function formatDynamicDiscussion(config: SessionConfig, result: SessionResult): string {
+  const openingRound = result.rounds[0];
+  if (!openingRound) {
+    return "";
+  }
+
+  const parts: string[] = [
+    "## Round 1: Initial Views",
+    "",
+    formatOutputs(openingRound.outputs),
+    "",
+  ];
+  const openingReview = result.moderatorReviews.find((review) => review.roundNumber === 1);
+  if (openingReview) {
+    parts.push("## Moderator Review: Round 1", "", formatModeratorReview(openingReview), "");
+  }
+
+  const initialPoll = result.urgencyPolls.find((poll) => poll.afterTurnNumber === config.minds.length);
+  if (initialPoll) {
+    parts.push(formatUrgencyPoll(initialPoll), "");
+  }
+
+  for (const turn of result.dynamicTurns) {
+    const inviter = turn.invitedByMindId
+      ? config.minds.find((mind) => mind.id === turn.invitedByMindId)
+      : undefined;
+    const invitedMind = turn.inviteMindId
+      ? config.minds.find((mind) => mind.id === turn.inviteMindId)
+      : undefined;
+    const selection =
+      turn.selectionMethod === "urgency"
+        ? "urgency (" + turn.selectedUrgency + ")"
+        : "invited by " + (inviter?.name ?? turn.invitedByMindId ?? "the previous speaker");
+
+    parts.push(
+      "## Turn " + turn.turnNumber + ": " + turn.mindName,
+      "",
+      "Selected by: " + selection,
+      "",
+      turn.content,
+      "",
+      "Invitation: " + (invitedMind ? invitedMind.name + " (" + invitedMind.id + ")" : "None"),
+      "",
+    );
+
+    const check = result.dynamicModeratorChecks.find((candidate) => candidate.afterTurnNumber === turn.turnNumber);
+    if (check) {
+      parts.push(
+        "### Moderator Check",
+        "",
+        "Action: " + check.action,
+        "",
+        formatDynamicModeratorCheck(check),
+        "",
+      );
+    }
+
+    const poll = result.urgencyPolls.find((candidate) => candidate.afterTurnNumber === turn.turnNumber);
+    if (poll) {
+      parts.push(formatUrgencyPoll(poll), "");
+    }
+  }
+
+  return parts.join("\n");
+}
+
+function formatUrgencyPoll(poll: SessionResult["urgencyPolls"][number]): string {
+  const selected = poll.selectedMindId
+    ? poll.signals.find((signal) => signal.mindId === poll.selectedMindId)
+    : undefined;
+  return [
+    "### Urgency Poll After Turn " + poll.afterTurnNumber,
+    "",
+    ...poll.signals.map((signal) => "- " + signal.mindName + ": " + signal.urgency),
+    "",
+    "Next speaker: " + (selected?.mindName ?? "None"),
+  ].join("\n");
+}
+
+function formatDynamicState(result: SessionResult): string[] {
+  if (result.discussionMode !== "dynamic") {
+    return [];
+  }
+
+  return [
+    "## Dynamic Scheduling State",
+    "",
+    "```json",
+    JSON.stringify(
+      {
+        effectiveMaxTurns: result.effectiveMaxTurns,
+        turns: result.dynamicTurns,
+        urgencyPolls: result.urgencyPolls,
+        moderatorChecks: result.dynamicModeratorChecks,
+      },
+      null,
+      2,
+    ),
+    "```",
+    "",
+  ];
 }
 
 function formatRounds(rounds: RoundResult[], reviews: ModeratorReview[]): string {

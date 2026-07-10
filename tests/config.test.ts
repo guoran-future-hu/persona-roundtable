@@ -129,6 +129,32 @@ test("loadSessionConfig resolves mind identity from persona folder metadata", as
   assert.equal(config.minds[0]?.name, "Naval");
 });
 
+test("loadSessionConfig loads Markdown context relative to the session config without changing line breaks", async () => {
+  const configDir = await mkdtemp(join(tmpdir(), "persona-roundtable-context-"));
+  const personaDir = join(configDir, "agents", "naval");
+  await mkdir(personaDir, { recursive: true });
+  await writeFile(join(personaDir, "SKILL.md"), "persona", "utf8");
+  await writeFile(join(personaDir, "persona.json"), JSON.stringify({ id: "naval", name: "Naval" }), "utf8");
+  await writeFile(join(configDir, "context.md"), "# Background\r\n\r\nA precise first paragraph.\r\nSecond line.\r\n", "utf8");
+  await writeFile(
+    join(configDir, "config.json"),
+    JSON.stringify({
+      topic: "A question",
+      context: "context.md",
+      maxRounds: 5,
+      moderatorProvider: "openai",
+      providers: {
+        openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+      },
+      minds: [{ personaPath: "agents/naval/SKILL.md", provider: "openai" }],
+    }),
+    "utf8",
+  );
+
+  const config = await loadSessionConfig(join(configDir, "config.json"));
+
+  assert.equal(config.context, "# Background\r\n\r\nA precise first paragraph.\r\nSecond line.\r\n");
+});
 test("parseSessionConfig defaults testMode to false", () => {
   const config = parseSessionConfig({
     topic: "A question",
@@ -147,6 +173,7 @@ test("parseSessionConfig defaults testMode to false", () => {
   });
 
   assert.equal(config.testMode, false);
+  assert.equal(config.discussionMode, "simple");
   assert.equal(config.compressionProvider, undefined);
 });
 
@@ -326,5 +353,113 @@ test("parseSessionConfig rejects unknown compression provider", () => {
         minds: [{ personaPath: "x.md", provider: "openai" }],
       }),
     /compressionProvider 'missing' is not defined in providers/,
+  );
+});
+
+test("parseSessionConfig accepts dynamic mode and maxTurns with at least three minds", () => {
+  const config = parseSessionConfig({
+    topic: "A question",
+    context: "rich context",
+    maxRounds: 5,
+    discussionMode: "dynamic",
+    maxTurns: 6,
+    moderatorProvider: "openai",
+    providers: {
+      openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+    },
+    minds: [
+      { personaPath: "agents/a/SKILL.md", provider: "openai" },
+      { personaPath: "agents/b/SKILL.md", provider: "openai" },
+      { personaPath: "agents/c/SKILL.md", provider: "openai" },
+    ],
+  });
+
+  assert.equal(config.discussionMode, "dynamic");
+  assert.equal(config.maxTurns, 6);
+});
+
+test("parseSessionConfig treats null maxTurns as the dynamic fallback", () => {
+  const config = parseSessionConfig({
+    topic: "A question",
+    context: "rich context",
+    maxRounds: 5,
+    discussionMode: "dynamic",
+    maxTurns: null,
+    moderatorProvider: "openai",
+    providers: {
+      openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+    },
+    minds: [
+      { personaPath: "agents/a/SKILL.md", provider: "openai" },
+      { personaPath: "agents/b/SKILL.md", provider: "openai" },
+      { personaPath: "agents/c/SKILL.md", provider: "openai" },
+    ],
+  });
+
+  assert.equal(config.maxTurns, undefined);
+});
+
+test("parseSessionConfig rejects invalid dynamic mode settings", () => {
+  const base = {
+    topic: "A question",
+    context: "rich context",
+    maxRounds: 5,
+    moderatorProvider: "openai",
+    providers: {
+      openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+    },
+  };
+
+  assert.throws(
+    () =>
+      parseSessionConfig({
+        ...base,
+        discussionMode: "dynamic",
+        minds: [
+          { personaPath: "agents/a/SKILL.md", provider: "openai" },
+          { personaPath: "agents/b/SKILL.md", provider: "openai" },
+        ],
+      }),
+    /requires at least three active minds/,
+  );
+
+  assert.throws(
+    () =>
+      parseSessionConfig({
+        ...base,
+        discussionMode: "dynamic",
+        maxTurns: 2,
+        minds: [
+          { personaPath: "agents/a/SKILL.md", provider: "openai" },
+          { personaPath: "agents/b/SKILL.md", provider: "openai" },
+          { personaPath: "agents/c/SKILL.md", provider: "openai" },
+        ],
+      }),
+    /must be at least the active mind count/,
+  );
+
+  assert.throws(
+    () =>
+      parseSessionConfig({
+        ...base,
+        discussionMode: "dynamic",
+        maxTurns: 1.5,
+        minds: [
+          { personaPath: "agents/a/SKILL.md", provider: "openai" },
+          { personaPath: "agents/b/SKILL.md", provider: "openai" },
+          { personaPath: "agents/c/SKILL.md", provider: "openai" },
+        ],
+      }),
+    /maxTurns must be a positive integer/,
+  );
+
+  assert.throws(
+    () =>
+      parseSessionConfig({
+        ...base,
+        discussionMode: "automatic",
+        minds: [{ personaPath: "agents/a/SKILL.md", provider: "openai" }],
+      }),
+    /discussionMode must be 'simple' or 'dynamic'/,
   );
 });

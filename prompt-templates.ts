@@ -11,6 +11,9 @@ export interface PromptTemplateSet {
   roundOne: PromptTemplate;
   followUpRound: PromptTemplate;
   moderator: PromptTemplate;
+  dynamicTurn: PromptTemplate;
+  urgency: PromptTemplate;
+  dynamicModerator: PromptTemplate;
   finalSummary: PromptTemplate;
   compression: PromptTemplate;
 }
@@ -19,6 +22,9 @@ export const defaultPromptTemplates: PromptTemplateSet = {
   roundOne: loadPromptTemplate("prompts/round1.md"),
   followUpRound: loadPromptTemplate("prompts/follow-up-round.md"),
   moderator: loadPromptTemplate("prompts/moderator.md"),
+  dynamicTurn: loadPromptTemplate("prompts/dynamic-turn.md"),
+  urgency: loadPromptTemplate("prompts/urgency.md"),
+  dynamicModerator: loadPromptTemplate("prompts/dynamic-moderator.md"),
   finalSummary: loadPromptTemplate("prompts/final-summary.md"),
   compression: loadPromptTemplate("prompts/compression.md"),
 };
