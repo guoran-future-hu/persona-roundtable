@@ -36,6 +36,10 @@ export function renderTemplate(template: PromptTemplate, variables: Record<strin
   ];
 }
 
+export function renderTextTemplate(template: string, variables: Record<string, string>): string {
+  return renderString(template, variables);
+}
+
 export function parsePromptTemplate(source: string): PromptTemplate {
   const withoutFrontmatter = source.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "");
   const system = extractTag(withoutFrontmatter, "system");

@@ -3,7 +3,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { readUtf8Text } from "../text-io";
+import { readUtf8Text } from "../src/text-io";
 
 test("readUtf8Text reads Chinese UTF-8 text", async () => {
   const dir = await mkdtemp(join(tmpdir(), "persona-roundtable-encoding-"));

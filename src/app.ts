@@ -5,7 +5,7 @@ import { createDummyModels } from "./models/dummy";
 import { createModels } from "./models/factory";
 import { runRoundtableSession, SessionRunError, type RunOptions } from "./orchestrator";
 import { loadMinds } from "./personas";
-import { saveTranscript } from "./transcript";
+import { createTranscriptPath, saveTranscript, saveUserTranscript } from "./transcript";
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
@@ -38,10 +38,12 @@ async function main(): Promise<void> {
     throw new Error(`No model configured for compression provider '${config.compressionProvider}'`);
   }
 
+  const liveTranscriptPath = createTranscriptPath(config);
   const runOptions: RunOptions = {
     moderatorModel,
     compressionModel,
     onProgress: (message) => console.log(message),
+    onSessionUpdate: (snapshot) => saveUserTranscript(config, snapshot, liveTranscriptPath),
     onSpeakerOutput: (output) => {
       console.log(output.content);
     },
@@ -52,17 +54,20 @@ async function main(): Promise<void> {
 
   const result = await runRoundtableSession(config, minds, runOptions).catch(async (error: unknown) => {
     if (error instanceof SessionRunError) {
-      const { transcriptPath, devLogPath } = await saveTranscript(config, error.partialResult);
+      const { transcriptPath, devLogPath, speakerCountLogPath } = await saveTranscript(config, error.partialResult, "sessions", liveTranscriptPath);
       console.error(`Partial transcript saved: ${transcriptPath}`);
       console.error(`Partial dev log saved: ${devLogPath}`);
+      console.error(`Speaker counts saved: ${speakerCountLogPath}`);
     }
 
     throw error;
   });
 
-  const { transcriptPath, devLogPath } = await saveTranscript(config, result);
+  const { transcriptPath, devLogPath, speakerCountLogPath } = await saveTranscript(config, result, "sessions", liveTranscriptPath);
+  console.log(`Session ended: ${result.stopReason ?? "Discussion ended."}`);
   console.log(`Transcript saved: ${transcriptPath}`);
   console.log(`Dev log saved: ${devLogPath}`);
+  console.log(`Speaker counts saved: ${speakerCountLogPath}`);
 }
 
 function parseArgs(args: string[]): { config?: string; help: boolean; testMode?: boolean } {

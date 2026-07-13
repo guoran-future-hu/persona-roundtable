@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { SessionConfig } from "../config";
-import type { ChatMessage, ChatModel } from "../models/types";
+import type { SessionConfig } from "../src/config";
+import type { ChatMessage, ChatModel } from "../src/models/types";
 import {
   buildFinalSummaryMessages,
   buildFollowUpRoundMessages,
@@ -17,9 +17,9 @@ import {
   type ModeratorReview,
   type RoundResult,
   type SpeakerOutput,
-} from "../orchestrator";
-import type { LoadedMind } from "../personas";
-import { renderDevLog, renderTranscript } from "../transcript";
+} from "../src/orchestrator";
+import type { LoadedMind } from "../src/personas";
+import { renderDevLog, renderTranscript } from "../src/transcript";
 
 class FakeModel implements ChatModel {
   readonly provider = "fake";
@@ -80,8 +80,7 @@ function review(
 ): string {
   return JSON.stringify({
     roundSummary: `summary ${roundNumber}`,
-    progressNote: `progress ${roundNumber}`,
-    comparisonToPrevious: roundNumber === 1 ? "No previous progress note." : `comparison ${roundNumber}`,
+    progressAssessment: `progress ${roundNumber}`,
     decision,
     endReason,
   });
@@ -92,11 +91,11 @@ test("round one prompt includes session data but no previous opinions", () => {
   const minds = [makeMind("naval", "Naval", model), makeMind("pg", "Paul Graham", new FakeModel("PG"))];
   const messages = buildRoundOneMessages(config.topic, String(config.context), "Use English.", minds[0]!, minds);
 
-  assert.match(messages[0]!.content, /Paul Graham/);
-  assert.match(messages[0]!.content, /Naval, Paul Graham/);
-  assert.match(messages[0]!.content, /Working language:\nUse English\./);
-  assert.match(messages[1]!.content, /Should I start a company/);
-  assert.match(messages[1]!.content, /I have savings/);
+  assert.match(messages[0]!.content, /\npg\n/);
+  assert.match(messages[0]!.content, /naval\npg/);
+  assert.match(messages[0]!.content, /<output_language>\nUse English\.\n<\/output_language>/);
+  assert.match(messages[0]!.content, /Should I start a company/);
+  assert.match(messages[0]!.content, /I have savings/);
   assert.doesNotMatch(messages[1]!.content, /previous rounds/i);
 });
 
@@ -115,22 +114,18 @@ test("follow-up prompt includes previous rounds, progress notes, and original to
     {
       roundNumber: 1,
       roundSummary: "opening positions",
-      progressNote: "defined the core tradeoff",
-      comparisonToPrevious: "No previous progress note.",
+      progressAssessment: "defined the core tradeoff",
       decision: "continue",
       endReason: "",
     },
   ];
   const messages = buildFollowUpRoundMessages(config.topic, String(config.context), "Use English.", 2, mind, previousRounds, reviews);
 
-  assert.match(messages[1]!.content, /<round number="1">/);
-  assert.match(messages[1]!.content, /Naval said:\ninitial naval/);
-  assert.match(messages[1]!.content, /Paul Graham said:\ninitial pg/);
-  assert.match(messages[1]!.content, /defined the core tradeoff/);
-  assert.match(messages[1]!.content, /Should I start a company/);
-  assert.match(messages[1]!.content, /I have savings/);
-  assert.ok(messages[1]!.content.indexOf("Question:") < messages[1]!.content.indexOf("Previous rounds:"));
-  assert.ok(messages[1]!.content.indexOf("Context:") < messages[1]!.content.indexOf("Previous rounds:"));
+  assert.match(messages[1]!.content, /<speech turn="1" speaker="naval">\ninitial naval/);
+  assert.match(messages[1]!.content, /<speech turn="1" speaker="pg">\ninitial pg/);
+  assert.match(messages[1]!.content, /<moderator-review round="1">\nSummary: opening(?: positions)?\nDecision: continue/);
+  assert.match(messages[0]!.content, /Should I start a company/);
+  assert.match(messages[0]!.content, /I have savings/);
 });
 
 test("moderator prompt includes current round and previous progress data", () => {
@@ -142,25 +137,20 @@ test("moderator prompt includes current round and previous progress data", () =>
     config.topic,
     String(config.context),
     "Use English.",
-    currentRound,
+    [currentRound],
     [
       {
         roundNumber: 1,
         roundSummary: "opening",
-        progressNote: "same few points",
-        comparisonToPrevious: "No previous progress note.",
+        progressAssessment: "same few points",
         decision: "continue",
         endReason: "",
       },
     ],
-    config.maxRounds,
   );
 
-  assert.doesNotMatch(messages[1]!.content, /Can end discussion/);
-  assert.match(messages[1]!.content, /Round number:\n2/);
-  assert.match(messages[1]!.content, /Max rounds:\n3/);
-  assert.match(messages[1]!.content, /same few points/);
-  assert.match(messages[1]!.content, /updated naval/);
+  assert.doesNotMatch(messages[0]!.content, /Can end discussion/);
+  assert.match(messages[0]!.content, /updated naval/);
 });
 
 test("final summary prompt includes full discussion context and stop reason", () => {
@@ -174,8 +164,7 @@ test("final summary prompt includes full discussion context and stop reason", ()
     {
       roundNumber: 1,
       roundSummary: "opening",
-      progressNote: "defined the core tradeoff",
-      comparisonToPrevious: "No previous progress note.",
+      progressAssessment: "defined the core tradeoff",
       decision: "continue",
       endReason: "",
     },
@@ -184,10 +173,10 @@ test("final summary prompt includes full discussion context and stop reason", ()
   const messages = buildFinalSummaryMessages(config.topic, String(config.context), "Use English.", rounds, reviews, "Reached maxRounds (1).");
 
   assert.match(messages[0]!.content, /Produce a final synthesis/);
-  assert.match(messages[1]!.content, /Should I start a company/);
+  assert.match(messages[0]!.content, /Should I start a company/);
   assert.match(messages[1]!.content, /Reached maxRounds \(1\)\./);
-  assert.match(messages[1]!.content, /defined the core tradeoff/);
-  assert.match(messages[1]!.content, /Naval said:\ninitial naval/);
+  assert.match(messages[0]!.content, /<moderator-review round="1">\nSummary: opening(?: positions)?\nDecision: continue/);
+  assert.match(messages[0]!.content, /<speech turn="1" speaker="naval">\ninitial naval/);
 });
 
 test("parseModeratorReview normalizes round one end decision to continue", () => {
@@ -267,7 +256,7 @@ test("orchestrator runs exactly maxRounds when moderator always continues", asyn
   const devLog = renderDevLog(
     {
       ...config,
-      workingLanguage: "Use English.",
+      outputLanguage: "Use English.",
       minds: [
         { id: "naval", name: "Naval", personaPath: "naval.md", provider: "fake" },
         { id: "pg", name: "Paul Graham", personaPath: "pg.md", provider: "fake" },
@@ -337,7 +326,7 @@ test("orchestrator compresses live round output but emits final summary uncompre
     speakerOutputs.map((output) => `${output.phaseLabel}: ${output.speaker} -> ${output.content}`),
     ["Moderator Final Summary: Moderator -> Moderator output 2"],
   );
-  assert.match(compressionModel.calls[0]![1]!.content, /Speaker:\nNaval/);
+  assert.match(compressionModel.calls[0]![1]!.content, /<speaker_output>\nNaval output 1\n<\/speaker_output>/);
   assert.doesNotMatch(compressionModel.calls[0]![1]!.content, /Phase:/);
   assert.equal(compressionModel.options[0]?.thinkingEnabled, false);
   assert.equal(compressionModel.options[1]?.thinkingEnabled, false);
@@ -387,7 +376,7 @@ test("orchestrator emits speaker outputs when compression is disabled", async ()
     [
       "Round 1: Naval -> Naval output 1",
       "Round 1: Paul Graham -> PG output 1",
-      "Moderator Review: Round 1: Moderator -> Round summary: summary 1\n\nProgress note: progress 1\n\nComparison to previous: No previous progress note.\n\nDecision: continue\n\nEnd reason: N/A",
+      "Moderator Review: Round 1: Moderator -> Round summary: summary 1\n\nProgress assessment: progress 1\n\nDecision: continue\n\nEnd reason: N/A",
       "Moderator Final Summary: Moderator -> Moderator output 2",
     ],
   );
@@ -431,38 +420,57 @@ test("orchestrator exposes partial result when moderator JSON is invalid", async
   const minds = [makeMind("naval", "Naval", new FakeModel("Naval"))];
 
   await assert.rejects(
-    async () => runRoundtableSession(config, minds, { moderatorModel: new FakeModel("Moderator", ["not json"]) }),
+    async () => runRoundtableSession(config, minds, { moderatorModel: new FakeModel("Moderator", ["not json", "still not json"]) }),
     (error: unknown) => {
       assert.ok(error instanceof SessionRunError);
       assert.equal(error.message, "Moderator review for round 1 was not valid JSON");
       assert.equal(error.partialResult.rounds[0]?.outputs[0]?.content, "Naval output 1");
       assert.equal(error.partialResult.moderatorReviews.length, 0);
       assert.equal(error.partialResult.modelCalls[1]?.phase, "moderator-review-1");
-      assert.equal(error.partialResult.modelCalls[1]?.response, "not json");
+      assert.equal(error.partialResult.modelCalls.length, 3);
+      assert.equal(error.partialResult.modelCalls[1]?.successful, false);
+      assert.equal(error.partialResult.modelCalls[2]?.response, "still not json");
       return true;
     },
   );
 });
 
+test("structured calls repair once without exposing the rejected attempt in the transcript", async () => {
+  const minds = [makeMind("naval", "Naval", new FakeModel("Naval"))];
+  const moderator = new FakeModel("Moderator", ["not json", review(1), "final summary"]);
+
+  const result = await runRoundtableSession({ ...config, maxRounds: 1 }, minds, { moderatorModel: moderator });
+  assert.equal(result.moderatorReviews[0]?.roundSummary, "summary 1");
+  assert.equal(result.modelCalls[1]?.successful, false);
+  assert.equal(result.modelCalls[1]?.attempt, 1);
+  assert.equal(result.modelCalls[2]?.successful, true);
+  assert.equal(result.modelCalls[2]?.attempt, 2);
+
+  const configWithMinds: SessionConfig = {
+    ...config,
+    maxRounds: 1,
+    minds: [{ id: "naval", name: "Naval", personaPath: "naval.md", provider: "fake" }],
+  };
+  assert.doesNotMatch(renderTranscript(configWithMinds, result), /not json/);
+  assert.match(renderDevLog(configWithMinds, result), /Validation: failed/);
+});
 function dynamicCheck(
   action: "continue" | "summarize" | "end_discussion",
   fields: Partial<{
     checkpointSummary: string;
-    progressNote: string;
-    comparisonToPrevious: string;
+    progressAssessment: string;
     endReason: string;
   }> = {},
 ): string {
   return JSON.stringify({
     action,
     checkpointSummary: fields.checkpointSummary ?? "",
-    progressNote: fields.progressNote ?? "",
-    comparisonToPrevious: fields.comparisonToPrevious ?? "",
+    progressAssessment: fields.progressAssessment ?? "",
     endReason: fields.endReason ?? "",
   });
 }
 
-test("dynamic mode uses urgency, honors invitations, and lets the moderator end before scheduling", async () => {
+test("dynamic mode polls urgency before moderator checks and preserves invitations", async () => {
   const dynamicConfig: SessionConfig = {
     ...config,
     discussionMode: "dynamic",
@@ -472,13 +480,15 @@ test("dynamic mode uses urgency, honors invitations, and lets the moderator end 
     "alpha opening",
     JSON.stringify({ urgency: "strong_need_to_respond" }),
     JSON.stringify({ content: "alpha response", inviteMindId: "beta" }),
+    JSON.stringify({ urgency: "minor_update" }),
   ]);
   const betaModel = new FakeModel("Beta", [
     "beta opening",
     JSON.stringify({ urgency: "minor_update" }),
     JSON.stringify({ content: "beta invited response", inviteMindId: null }),
+    JSON.stringify({ urgency: "minor_update" }),
   ]);
-  const gammaModel = new FakeModel("Gamma", ["gamma opening"]);
+  const gammaModel = new FakeModel("Gamma", ["gamma opening", JSON.stringify({ urgency: "minor_update" }), JSON.stringify({ urgency: "no_new_comment" })]);
   const moderatorModel = new FakeModel("Moderator", [
     review(1),
     dynamicCheck("continue"),
@@ -497,7 +507,7 @@ test("dynamic mode uses urgency, honors invitations, and lets the moderator end 
   assert.equal(result.discussionMode, "dynamic");
   assert.equal(result.effectiveMaxTurns, 8);
   assert.deepEqual(result.rounds[0]?.outputs.map((output) => output.mindName), ["Alpha", "Beta", "Gamma"]);
-  assert.equal(result.urgencyPolls.length, 1);
+  assert.equal(result.urgencyPolls.length, 2);
   assert.deepEqual(
     result.urgencyPolls[0]?.signals.map((signal) => [signal.mindId, signal.urgency]),
     [
@@ -525,9 +535,9 @@ test("dynamic mode uses urgency, honors invitations, and lets the moderator end 
   assert.equal(alphaModel.options[1]?.thinkingEnabled, false);
   assert.equal(compressionModel.calls.length, 6);
   assert.equal(result.modelCalls.filter((call) => call.phase === "compression").length, 6);
-  assert.match(moderatorModel.calls[1]![0]!.content, /one checkpoint summary per 3 post-opening speeches/);
-  assert.match(moderatorModel.calls[2]![1]!.content, /alpha response/);
-  assert.match(moderatorModel.calls[2]![1]!.content, /beta invited response/);
+  assert.match(moderatorModel.calls[1]![0]!.content, /approximately one summary per 3 post-opening speeches/);
+  assert.match(moderatorModel.calls[2]![0]!.content, /alpha response/);
+  assert.match(moderatorModel.calls[2]![0]!.content, /beta invited response/);
 
   const transcript = renderTranscript(
     {
@@ -562,7 +572,8 @@ test("dynamic moderator checkpoints reset cadence and all-quiet urgency ends the
   const betaModel = new FakeModel("Beta", [
     "beta opening",
     JSON.stringify({ urgency: "strong_need_to_respond" }),
-    JSON.stringify({ content: "beta response", inviteMindId: null }),
+    JSON.stringify({ content: "beta invited response", inviteMindId: null }),
+    JSON.stringify({ urgency: "minor_update" }),
   ]);
   const gammaModel = new FakeModel("Gamma", [
     "gamma opening",
@@ -572,8 +583,7 @@ test("dynamic moderator checkpoints reset cadence and all-quiet urgency ends the
     review(1),
     dynamicCheck("summarize", {
       checkpointSummary: "new checkpoint",
-      progressNote: "meaningful progress",
-      comparisonToPrevious: "sharper disagreement",
+      progressAssessment: "meaningful progress",
     }),
     "quiet final summary",
   ]);
@@ -682,10 +692,22 @@ test("dynamic structured response parsers reject invalid scheduling data", () =>
       ),
     /invited unknown mind ID/,
   );
+  assert.deepEqual(
+    parseDynamicSpeakerResponse("嗯。类型不同。\n\n{\"inviteMindId\":\"beta\"}", 4, minds[0]!, minds),
+    { content: "嗯。类型不同。", inviteMindId: "beta" },
+  );
   assert.throws(
     () => parseUrgencyResponse(JSON.stringify({ urgency: "urgent" }), 3, minds[0]!),
     /invalid urgency/,
   );
+  assert.deepEqual(parseDynamicModeratorCheck(JSON.stringify({ action: "continue" }), 4, 1), {
+    afterTurnNumber: 4,
+    turnsSinceCheckpoint: 1,
+    action: "continue",
+    checkpointSummary: "",
+    progressAssessment: "",
+    endReason: "",
+  });
   assert.throws(
     () => parseDynamicModeratorCheck(dynamicCheck("continue", { checkpointSummary: "unexpected" }), 4, 1),
     /requires empty summary and end fields/,
@@ -706,6 +728,7 @@ test("dynamic mode preserves scheduling state when a structured speech is invali
       "alpha opening",
       JSON.stringify({ urgency: "strong_need_to_respond" }),
       "not json",
+      "still not json",
     ])),
     makeMind("beta", "Beta", new FakeModel("Beta", [
       "beta opening",
@@ -727,7 +750,7 @@ test("dynamic mode preserves scheduling state when a structured speech is invali
       assert.equal(error.partialResult.urgencyPolls[0]?.selectedMindId, "alpha");
       assert.equal(error.partialResult.dynamicTurns.length, 0);
       assert.equal(error.partialResult.modelCalls.at(-1)?.phase, "dynamic-turn-4");
-      assert.equal(error.partialResult.modelCalls.at(-1)?.response, "not json");
+      assert.equal(error.partialResult.modelCalls.at(-1)?.response, "still not json");
       return true;
     },
   );

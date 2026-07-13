@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { loadSessionConfig, parseSessionConfig } from "../config";
+import { loadSessionConfig, parseSessionConfig } from "../src/config";
 
 test("parseSessionConfig loads topic, context, providers, and minds", () => {
   const config = parseSessionConfig({
@@ -11,7 +11,7 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
     context: "rich context",
     maxRounds: 5,
     testMode: true,
-    workingLanguage: "Use English.",
+    outputLanguage: "Use English.",
     moderatorProvider: "openai",
     compressionProvider: "deepseek",
     providers: {
@@ -36,7 +36,7 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
   assert.equal(config.context, "rich context");
   assert.equal(config.maxRounds, 5);
   assert.equal(config.testMode, true);
-  assert.equal(config.workingLanguage, "Use English.");
+  assert.equal(config.outputLanguage, "Use English.");
   assert.equal(config.compressionProvider, "deepseek");
   assert.equal(config.providers.openai.type, "openai");
   assert.equal(config.providers.deepseek.reasoningEffort, "max");

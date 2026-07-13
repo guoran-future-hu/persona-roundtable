@@ -36,6 +36,7 @@ export class AnthropicModel implements ChatModel {
       system,
       messages: conversation,
       ...(options.thinkingEnabled === false ? { thinking: { type: "disabled" } } : {}),
+      ...(options.structuredOutput ? { output_config: { format: { type: "json_schema", schema: options.structuredOutput.schema } } } : {}),
     };
 
     const response = await this.fetch("https://api.anthropic.com/v1/messages", {

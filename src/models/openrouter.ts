@@ -26,6 +26,7 @@ export class OpenRouterModel implements ChatModel {
         content: message.content,
       })),
       ...(options.thinkingEnabled === false ? { reasoning: { effort: "none" } } : {}),
+      ...(options.structuredOutput ? { response_format: { type: "json_schema", json_schema: { name: options.structuredOutput.name, strict: true, schema: options.structuredOutput.schema } } } : {}),
       max_tokens: options.maxOutputTokens ?? 1400,
       stream: false,
     };

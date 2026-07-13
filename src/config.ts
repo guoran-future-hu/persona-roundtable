@@ -30,7 +30,7 @@ export interface SessionConfig {
   discussionMode?: DiscussionMode;
   maxTurns?: number;
   testMode: boolean;
-  workingLanguage?: string;
+  outputLanguage?: string;
   globalMindsProvider?: string;
   moderatorProvider: string;
   compressionProvider?: string;
@@ -88,8 +88,8 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
   const discussionMode = parseDiscussionMode(config.discussionMode);
   const maxTurns = parseOptionalPositiveInteger(config.maxTurns, "maxTurns");
   const testMode = config.testMode === undefined ? false : expectBoolean(config.testMode, "testMode");
-  const workingLanguage =
-    config.workingLanguage === undefined ? undefined : expectString(config.workingLanguage, "workingLanguage");
+  const outputLanguage =
+    config.outputLanguage === undefined ? undefined : expectString(config.outputLanguage, "outputLanguage");
 
   const globalMindsProvider = parseOptionalProvider(config.globalMindsProvider, "globalMindsProvider");
   const moderatorProvider = expectString(config.moderatorProvider, "moderatorProvider");
@@ -140,7 +140,7 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     discussionMode,
     maxTurns,
     testMode,
-    workingLanguage,
+    outputLanguage,
     globalMindsProvider,
     moderatorProvider,
     compressionProvider,

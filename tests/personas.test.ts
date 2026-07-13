@@ -3,9 +3,9 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import type { LoadedSessionConfig } from "../config";
-import { DummyModel } from "../models/dummy";
-import { loadMinds } from "../personas";
+import type { LoadedSessionConfig } from "../src/config";
+import { DummyModel } from "../src/models/dummy";
+import { loadMinds } from "../src/personas";
 
 function makeConfig(configDir: string, testMode: boolean): LoadedSessionConfig {
   return {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parsePromptTemplate, renderTemplate } from "../prompt-templates";
+import { parsePromptTemplate, renderTemplate, renderTextTemplate } from "../src/prompt-templates";
 
 test("parsePromptTemplate extracts system and user blocks", () => {
   const template = parsePromptTemplate(`---
@@ -46,5 +46,11 @@ test("renderTemplate rejects missing placeholders", () => {
         {},
       ),
     /Missing prompt template variable: missing/,
+  );
+});
+test("renderTextTemplate replaces placeholders", () => {
+  assert.equal(
+    renderTextTemplate("Summary: {{summary}}", { summary: "A useful update" }),
+    "Summary: A useful update",
   );
 });

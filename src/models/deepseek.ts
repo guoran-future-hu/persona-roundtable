@@ -31,6 +31,7 @@ export class DeepSeekModel implements ChatModel {
       })),
       thinking: { type: thinkingEnabled ? "enabled" : "disabled" },
       ...(thinkingEnabled ? { reasoning_effort: this.reasoningEffort } : {}),
+      ...(options.structuredOutput ? { response_format: { type: "json_object" } } : {}),
       max_tokens: options.maxOutputTokens ?? 1400,
       stream: false,
     };

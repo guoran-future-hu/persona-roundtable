@@ -26,6 +26,7 @@ export class OpenAIModel implements ChatModel {
         content: message.content,
       })),
       ...(options.thinkingEnabled === false ? { reasoning: { effort: "none" } } : {}),
+      ...(options.structuredOutput ? { text: { format: { type: "json_schema", name: options.structuredOutput.name, strict: true, schema: options.structuredOutput.schema } } } : {}),
       max_output_tokens: options.maxOutputTokens ?? 1400,
     };
 

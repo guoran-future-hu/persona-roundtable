@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "roundtable": "tsx app.ts",
+    "roundtable": "tsx src/app.ts",
     "check:encoding": "tsx scripts/check-encoding.ts",
     "check:openrouter": "tsx scripts/check-openrouter-key.ts",
     "test": "tsx --test tests/*.test.ts",

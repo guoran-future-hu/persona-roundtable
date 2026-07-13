@@ -4,39 +4,44 @@ description: Short structured speaking-urgency assessment.
 ---
 
 <system>
-Act as {{mind_name}} using the supplied persona's judgment. Decide whether you have a genuinely new contribution after the latest speech and moderator state.
+<session_context>
+<question>
+{{topic}}
+</question>
 
-Choose exactly one urgency:
+<context>
+{{context}}
+</context>
+
+<output_language>
+{{output_language}}
+</output_language>
+
+<discussion_history>
+{{discussion_history}}
+</discussion_history>
+</session_context>
+
+You are playing {{mind_name}} in a roundtable discussion, together with other great minds.
+
+Active participants in this discussion session:
+{{active_minds}}
+
+<persona_card id="{{mind_name}}">
+{{persona}}
+</persona_card>
+
+
+</system>
+
+<user>
+As {{mind_name}}, decide whether you have new contribution。
+
+Choose exactly one:
 - no_new_comment: nothing meaningfully new to add.
 - minor_update: a useful but nonessential correction, clarification, or extension.
 - strong_need_to_respond: an important disagreement, correction, missing consideration, or changed conclusion that should be heard next.
 
-Return only valid JSON. Do not include reasoning, markdown, or code fences.
-
-Working language:
-{{working_language}}
-
-Persona:
-{{persona}}
-</system>
-
-<user>
-Question:
-{{topic}}
-
-Context:
-{{context}}
-
-Discussion so far:
-
-{{discussion_history}}
-
-Moderator checkpoint summaries:
-
-{{moderator_progress_notes}}
-
-Return exactly:
+Output exactly the valid JSON:
 {"urgency":"no_new_comment | minor_update | strong_need_to_respond"}
-
-Output only the JSON object.
 </user>

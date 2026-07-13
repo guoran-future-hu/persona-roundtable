@@ -1,33 +1,65 @@
 import { mkdir } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import type { MindConfig, SessionConfig } from "./config";
-import type { ModelCallLog, ModeratorReview, RoundOutput, RoundResult, SessionResult } from "./orchestrator";
-import { formatDynamicModeratorCheck, formatModeratorReview, serializeContext } from "./orchestrator";
+import type { ModelCallLog, ModeratorReview, RoundOutput, RoundResult, SessionResult } from "./session-types";
+import { formatDynamicModeratorCheck, formatModeratorReview } from "./session-formatters";
+import { serializeContext } from "./discussion-prompts";
 import { writeUtf8Text } from "./text-io";
 
 export interface SavedSessionPaths {
   transcriptPath: string;
   devLogPath: string;
+  speakerCountLogPath: string;
 }
 
+export function createTranscriptPath(config: SessionConfig, outputDir = "sessions", createdAt = new Date()): string {
+  const baseName = createdAt.toISOString().replace(/[:.]/g, "-") + "-" + slugify(config.topic);
+  return resolve(outputDir, baseName + ".md");
+}
+
+export async function saveUserTranscript(
+  config: SessionConfig,
+  result: SessionResult,
+  transcriptPath: string,
+  createdAt = new Date(),
+): Promise<void> {
+  await mkdir(dirname(transcriptPath), { recursive: true });
+  await writeUtf8Text(transcriptPath, renderTranscript(config, result, createdAt));
+}
 export async function saveTranscript(
   config: SessionConfig,
   result: SessionResult,
   outputDir = "sessions",
+  transcriptPathOverride?: string,
 ): Promise<SavedSessionPaths> {
   await mkdir(outputDir, { recursive: true });
 
   const createdAt = new Date();
   const baseName = `${createdAt.toISOString().replace(/[:.]/g, "-")}-${slugify(config.topic)}`;
-  const transcriptPath = resolve(outputDir, `${baseName}.md`);
+  const transcriptPath = transcriptPathOverride ?? resolve(outputDir, `${baseName}.md`);
   const devLogPath = resolve(outputDir, `${baseName}.dev.md`);
+  const speakerCountLogPath = resolve(outputDir, `${baseName}.speaker-counts.tmp.json`);
 
   await writeUtf8Text(transcriptPath, renderTranscript(config, result, createdAt));
   await writeUtf8Text(devLogPath, renderDevLog(config, result, createdAt));
+  await writeUtf8Text(speakerCountLogPath, JSON.stringify(renderSpeakerCounts(config, result, createdAt), null, 2));
 
-  return { transcriptPath, devLogPath };
+  return { transcriptPath, devLogPath, speakerCountLogPath };
 }
 
+function renderSpeakerCounts(config: SessionConfig, result: SessionResult, createdAt: Date): unknown {
+  const counts = new Map<string, number>();
+  for (const round of result.rounds) {
+    for (const output of round.outputs) {
+      counts.set(output.mindId, (counts.get(output.mindId) ?? 0) + 1);
+    }
+  }
+
+  return {
+    generatedAt: createdAt.toISOString(),
+    counts: config.minds.map((mind) => ({ mindId: mind.id, mindName: mind.name, speeches: counts.get(mind.id) ?? 0 })),
+  };
+}
 export function renderTranscript(config: SessionConfig, result: SessionResult, createdAt = new Date()): string {
   return [
     `# persona-roundtable Session: ${config.topic}`,
@@ -44,9 +76,9 @@ export function renderTranscript(config: SessionConfig, result: SessionResult, c
     serializeContext(result.context),
     "```",
     "",
-    "## Working Language",
+    "## Output Language",
     "",
-    config.workingLanguage ?? "Use the user's language unless the persona has a stronger reason to do otherwise.",
+    config.outputLanguage ?? "Use the user's language unless the persona has a stronger reason to do otherwise.",
     "",
     "## Minds",
     "",
@@ -82,7 +114,7 @@ export function renderDevLog(config: SessionConfig, result: SessionResult, creat
         maxTurns: config.maxTurns,
         effectiveMaxTurns: result.effectiveMaxTurns,
         testMode: config.testMode,
-        workingLanguage: config.workingLanguage,
+        outputLanguage: config.outputLanguage,
         globalMindsProvider: config.globalMindsProvider,
         moderatorProvider: config.moderatorProvider,
         compressionProvider: config.compressionProvider,
@@ -172,6 +204,11 @@ function formatDynamicDiscussion(config: SessionConfig, result: SessionResult): 
       "",
     );
 
+    const poll = result.urgencyPolls.find((candidate) => candidate.afterTurnNumber === turn.turnNumber);
+    if (poll) {
+      parts.push(formatUrgencyPoll(poll), "");
+    }
+
     const check = result.dynamicModeratorChecks.find((candidate) => candidate.afterTurnNumber === turn.turnNumber);
     if (check) {
       parts.push(
@@ -182,11 +219,6 @@ function formatDynamicDiscussion(config: SessionConfig, result: SessionResult): 
         formatDynamicModeratorCheck(check),
         "",
       );
-    }
-
-    const poll = result.urgencyPolls.find((candidate) => candidate.afterTurnNumber === turn.turnNumber);
-    if (poll) {
-      parts.push(formatUrgencyPoll(poll), "");
     }
   }
 
@@ -257,6 +289,9 @@ function formatModeratorSection(review: ModeratorReview, isClosingReview: boolea
 function formatModelCall(call: ModelCallLog): string {
   return [
     `### ${call.phase}: ${call.speaker}`,
+    "",
+    ...(call.attempt === undefined ? [] : [`Attempt: ${call.attempt}`]),
+    ...(call.successful === false ? ["Validation: failed", call.validationError ?? "Unknown validation error"] : []),
     "",
     `Provider: ${call.provider}`,
     "",

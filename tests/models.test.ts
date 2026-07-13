@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { LoadedSessionConfig } from "../config";
-import { AnthropicModel } from "../models/anthropic";
-import { DeepSeekModel, extractDeepSeekText } from "../models/deepseek";
-import { createDummyModels } from "../models/dummy";
-import { createModels } from "../models/factory";
-import { OpenAIModel } from "../models/openai";
-import { OpenRouterModel } from "../models/openrouter";
-import type { HttpFetch } from "../models/types";
+import type { LoadedSessionConfig } from "../src/config";
+import { AnthropicModel } from "../src/models/anthropic";
+import { DeepSeekModel, extractDeepSeekText } from "../src/models/deepseek";
+import { createDummyModels } from "../src/models/dummy";
+import { createModels } from "../src/models/factory";
+import { OpenAIModel } from "../src/models/openai";
+import { OpenRouterModel } from "../src/models/openrouter";
+import type { HttpFetch } from "../src/models/types";
 
 test("OpenAIModel creates a Responses API request shape", async () => {
   let capturedBody: unknown;
@@ -353,7 +353,7 @@ test("createDummyModels queues compression responses in runtime call order", asy
     "[moderator, round 2 summary]",
   );
   assert.equal(await model.generate([{ role: "user", content: "compress moderator round 2" }]), "[moderator, round 2 compressed]");
-  assert.equal(await model.generate([{ role: "user", content: "final summary" }]), "[moderator, final summary]");
+  assert.equal(await model.generate([{ role: "user", content: "<stop_reason>" }]), "[moderator, final summary]");
 });
 
 test("createModels only requires keys for providers used by the session", () => {
@@ -509,7 +509,7 @@ test("createModels supports codex, claude, and openrouter provider types", () =>
   }
 });
 
-test("createDummyModels produces a complete deterministic dynamic-mode route", async () => {
+test("createDummyModels produces randomized prompt-aware dynamic-mode responses", async () => {
   const config: LoadedSessionConfig = {
     configPath: "config.json",
     configDir: ".",
@@ -534,36 +534,70 @@ test("createDummyModels produces a complete deterministic dynamic-mode route", a
   };
 
   const models = createDummyModels(config);
-  assert.equal(await models.alpha!.generate([{ role: "user", content: "opening" }]), "[alpha, opening]");
-  assert.equal(await models.beta!.generate([{ role: "user", content: "opening" }]), "[beta, opening]");
-  assert.equal(await models.gamma!.generate([{ role: "user", content: "opening" }]), "[gamma, opening]");
+  assert.equal(await models.alpha!.generate([{ role: "user", content: "You are playing Alpha" }]), "[alpha, opening]");
+  assert.equal(await models.beta!.generate([{ role: "user", content: "You are playing Beta" }]), "[beta, opening]");
+  assert.equal(await models.gamma!.generate([{ role: "user", content: "You are playing Gamma" }]), "[gamma, opening]");
 
   const openingReview = JSON.parse(
-    await models.moderator!.generate([{ role: "user", content: "opening review" }]),
+    await models.moderator!.generate([{ role: "user", content: "You are the moderator of a roundtable discussion.\n<discussion_history>" }]),
   ) as { decision: string };
   assert.equal(openingReview.decision, "continue");
 
   const alphaUrgency = JSON.parse(
-    await models.alpha!.generate([{ role: "user", content: "urgency" }]),
+    await models.alpha!.generate([{ role: "user", content: '{"urgency":"no_new_comment | minor_update | strong_need_to_respond"}' }]),
   ) as { urgency: string };
   const betaUrgency = JSON.parse(
-    await models.beta!.generate([{ role: "user", content: "urgency" }]),
+    await models.beta!.generate([{ role: "user", content: '{"urgency":"no_new_comment | minor_update | strong_need_to_respond"}' }]),
   ) as { urgency: string };
-  assert.equal(alphaUrgency.urgency, "minor_update");
-  assert.equal(betaUrgency.urgency, "no_new_comment");
+  assert.ok(["no_new_comment", "minor_update", "strong_need_to_respond"].includes(alphaUrgency.urgency));
+  assert.ok(["no_new_comment", "minor_update", "strong_need_to_respond"].includes(betaUrgency.urgency));
 
   const dynamicTurn = JSON.parse(
-    await models.alpha!.generate([{ role: "user", content: "dynamic turn" }]),
+    await models.alpha!.generate([{ role: "user", content: '<persona_card id="Alpha">\n"inviteMindId": null' }]),
   ) as { content: string; inviteMindId: string | null };
-  assert.equal(dynamicTurn.content, "[alpha, dynamic turn]");
-  assert.equal(dynamicTurn.inviteMindId, null);
+  assert.match(dynamicTurn.content, /^\[alpha, test-mode dynamic response/);
+  assert.ok(dynamicTurn.inviteMindId === null || ["beta", "gamma"].includes(dynamicTurn.inviteMindId));
 
   const moderatorCheck = JSON.parse(
-    await models.moderator!.generate([{ role: "user", content: "moderator check" }]),
+    await models.moderator!.generate([{ role: "user", content: "You are the moderator of a dynamic roundtable discussion." }]),
   ) as { action: string };
-  assert.equal(moderatorCheck.action, "end_discussion");
+  assert.ok(["continue", "summarize", "end_discussion"].includes(moderatorCheck.action));
   assert.equal(
-    await models.moderator!.generate([{ role: "user", content: "final summary" }]),
-    "[moderator, final summary]",
+    await models.moderator!.generate([{ role: "user", content: "<stop_reason>" }]),
+    "[moderator, test-mode final summary]",
   );
+});
+test("model adapters request native structured output", async () => {
+  const structuredOutput = {
+    name: "decision",
+    schema: {
+      type: "object",
+      properties: { decision: { type: "string" } },
+      required: ["decision"],
+      additionalProperties: false,
+    },
+  };
+  const bodies: unknown[] = [];
+  const fetchFor = (payload: unknown): HttpFetch => async (_url, init) => {
+    bodies.push(JSON.parse(init.body) as unknown);
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      async json() { return payload; },
+      async text() { return ""; },
+    };
+  };
+
+  await new OpenAIModel({ apiKey: "key", model: "gpt", fetch: fetchFor({ output_text: "{}" }) }).generate([], { structuredOutput });
+  await new AnthropicModel({ apiKey: "key", model: "claude", fetch: fetchFor({ content: [{ type: "text", text: "{}" }] }) }).generate([], { structuredOutput });
+  await new OpenRouterModel({ apiKey: "key", model: "model", fetch: fetchFor({ choices: [{ message: { content: "{}" } }] }) }).generate([], { structuredOutput });
+  await new DeepSeekModel({ apiKey: "key", model: "deepseek", fetch: fetchFor({ choices: [{ message: { content: "{}" } }] }) }).generate([], { structuredOutput });
+
+  assert.equal((bodies[0] as { text: { format: { type: string; strict: boolean } } }).text.format.type, "json_schema");
+  assert.equal((bodies[0] as { text: { format: { strict: boolean } } }).text.format.strict, true);
+  assert.equal((bodies[1] as { output_config: { format: { type: string } } }).output_config.format.type, "json_schema");
+  assert.equal((bodies[2] as { response_format: { type: string; json_schema: { strict: boolean } } }).response_format.type, "json_schema");
+  assert.equal((bodies[2] as { response_format: { json_schema: { strict: boolean } } }).response_format.json_schema.strict, true);
+  assert.deepEqual((bodies[3] as { response_format: unknown }).response_format, { type: "json_object" });
 });
