@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import "dotenv/config";
+import { config as loadDotenv } from "dotenv";
 import { loadSessionConfig } from "./config";
 import { createDummyModels } from "./models/dummy";
 import { createModels } from "./models/factory";
@@ -15,10 +15,13 @@ async function main(): Promise<void> {
     return;
   }
 
+  const envFile = args.envFile ?? ".env";
+  loadDotenv({ path: envFile, override: args.envFile !== undefined });
+
   const configPath = args.config ?? "config.json";
 
   if (!existsSync(configPath)) {
-    throw new Error(`Config file not found: ${configPath}. Copy config-example.json to config.json and edit it.`);
+    throw new Error(`Config file not found: ${configPath}. Create config.json or pass --config <path>.`);
   }
 
   console.log("Richer context gives the minds more to work with; edit the context fields in the session JSON before running.");
@@ -29,6 +32,7 @@ async function main(): Promise<void> {
   const minds = await loadMinds(config, models);
   const moderatorModel = models[config.moderatorProvider];
   const compressionModel = config.compressionProvider === undefined ? undefined : models[config.compressionProvider];
+  const urgencyModel = config.urgencyProvider === undefined ? undefined : models[config.urgencyProvider];
 
   if (!moderatorModel) {
     throw new Error(`No model configured for moderator provider '${config.moderatorProvider}'`);
@@ -36,6 +40,10 @@ async function main(): Promise<void> {
 
   if (config.compressionProvider !== undefined && !compressionModel) {
     throw new Error(`No model configured for compression provider '${config.compressionProvider}'`);
+  }
+
+  if (config.urgencyProvider !== undefined && !urgencyModel) {
+    throw new Error(`No model configured for urgency provider '${config.urgencyProvider}'`);
   }
 
   const liveTranscriptPath = createTranscriptPath(config);
@@ -70,8 +78,8 @@ async function main(): Promise<void> {
   console.log(`Speaker counts saved: ${speakerCountLogPath}`);
 }
 
-function parseArgs(args: string[]): { config?: string; help: boolean; testMode?: boolean } {
-  const parsed: { config?: string; help: boolean; testMode?: boolean } = { help: false };
+function parseArgs(args: string[]): { config?: string; envFile?: string; help: boolean; testMode?: boolean } {
+  const parsed: { config?: string; envFile?: string; help: boolean; testMode?: boolean } = { help: false };
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -93,6 +101,18 @@ function parseArgs(args: string[]): { config?: string; help: boolean; testMode?:
       continue;
     }
 
+    if (arg === "--env-file") {
+      const value = args[index + 1];
+
+      if (!value) {
+        throw new Error("--env-file requires a path");
+      }
+
+      parsed.envFile = value;
+      index += 1;
+      continue;
+    }
+
     if (arg === "--test-mode") {
       parsed.testMode = true;
       continue;
@@ -108,10 +128,12 @@ function printHelp(): void {
   console.log(`persona-roundtable MVP
 
 Usage:
-  npm run roundtable -- --config config.json
-  npm run roundtable -- --config config.json --test-mode
+  npm run roundtable
+  npm run roundtable -- --config path/to/config.json
+  npm run roundtable -- --config path/to/config.json --env-file path/to/.env
 
 The JSON config is the single source of truth for a session. Put the topic and rich context there.
+The default files are config.json and .env. Use --config and --env-file to select alternate files explicitly.
 Use --test-mode to force deterministic dummy models for a single run.
 Richer context gives the minds more to work with: goals, constraints, values, history, and current circumstances.
 `);

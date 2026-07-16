@@ -1,4 +1,6 @@
-import "dotenv/config";
+import { config as loadDotenv } from "dotenv";
+
+loadDotenv({ path: ".env" });
 
 const apiKey = process.env.OPENROUTER_API_KEY?.trim();
 

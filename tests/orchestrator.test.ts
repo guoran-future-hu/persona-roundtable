@@ -478,17 +478,19 @@ test("dynamic mode polls urgency before moderator checks and preserves invitatio
   };
   const alphaModel = new FakeModel("Alpha", [
     "alpha opening",
-    JSON.stringify({ urgency: "strong_need_to_respond" }),
     JSON.stringify({ content: "alpha response", inviteMindId: "beta" }),
-    JSON.stringify({ urgency: "minor_update" }),
   ]);
   const betaModel = new FakeModel("Beta", [
     "beta opening",
-    JSON.stringify({ urgency: "minor_update" }),
     JSON.stringify({ content: "beta invited response", inviteMindId: null }),
-    JSON.stringify({ urgency: "minor_update" }),
   ]);
-  const gammaModel = new FakeModel("Gamma", ["gamma opening", JSON.stringify({ urgency: "minor_update" }), JSON.stringify({ urgency: "no_new_comment" })]);
+  const gammaModel = new FakeModel("Gamma", ["gamma opening"]);
+  const urgencyModel = new FakeModel("Urgency", [
+    JSON.stringify({ urgency: "strong_need_to_respond" }),
+    JSON.stringify({ urgency: "minor_update" }),
+    JSON.stringify({ urgency: "minor_update" }),
+    JSON.stringify({ urgency: "no_new_comment" }),
+  ]);
   const moderatorModel = new FakeModel("Moderator", [
     review(1),
     dynamicCheck("continue"),
@@ -502,7 +504,7 @@ test("dynamic mode polls urgency before moderator checks and preserves invitatio
     makeMind("gamma", "Gamma", gammaModel),
   ];
 
-  const result = await runRoundtableSession(dynamicConfig, minds, { moderatorModel, compressionModel });
+  const result = await runRoundtableSession(dynamicConfig, minds, { moderatorModel, compressionModel, urgencyModel });
 
   assert.equal(result.discussionMode, "dynamic");
   assert.equal(result.effectiveMaxTurns, 8);
@@ -531,8 +533,10 @@ test("dynamic mode polls urgency before moderator checks and preserves invitatio
   assert.deepEqual(result.dynamicModeratorChecks.map((check) => check.action), ["continue", "end_discussion"]);
   assert.equal(result.stopReason, "Enough evidence.");
   assert.equal(result.finalSummary, "dynamic final summary");
-  assert.equal(alphaModel.options[1]?.maxOutputTokens, 128);
-  assert.equal(alphaModel.options[1]?.thinkingEnabled, false);
+  assert.equal(urgencyModel.calls.length, 4);
+  assert.equal(urgencyModel.options[0]?.maxOutputTokens, 128);
+  assert.equal(urgencyModel.options[0]?.thinkingEnabled, false);
+  assert.equal(alphaModel.options.length, 2);
   assert.equal(compressionModel.calls.length, 6);
   assert.equal(result.modelCalls.filter((call) => call.phase === "compression").length, 6);
   assert.match(moderatorModel.calls[1]![0]!.content, /approximately one summary per 3 post-opening speeches/);

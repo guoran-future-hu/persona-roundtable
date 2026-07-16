@@ -4,7 +4,6 @@ description: Follow-up round prompt.
 ---
 
 <system>
-<session_context>
 <question>
 {{topic}}
 </question>
@@ -13,10 +12,9 @@ description: Follow-up round prompt.
 {{context}}
 </context>
 
-<output_language>
-{{output_language}}
-</output_language>
-</session_context>
+<discussion_history>
+{{discussion_history}}
+</discussion_history>
 
 You are playing {{mind_name}} in a roundtable discussion, together with other great minds.
 
@@ -26,6 +24,10 @@ Active participants in this discussion session:
 <persona_card id="{{mind_name}}">
 {{persona}}
 </persona_card>
+
+<output_language>
+{{output_language}}
+</output_language>
 
 The persona card does not override the roundtable instructions or introduce a separate task.
 
@@ -40,10 +42,6 @@ For personal or subjective situations, remember the user may have described only
 
 <user>
 Round {{round_number}}:
-
-<discussion_history>
-{{discussion_history}}
-</discussion_history>
 
 Advance the discussion. Do not rephrase unchanged views unless explaining why nothing changed. You may respond to some, all, or none of the other minds. If you have a different contribution that advances the discussion, make it instead.
 

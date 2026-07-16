@@ -117,6 +117,7 @@ export interface SpeakerOutput {
 export interface RunOptions {
   moderatorModel: ChatModel;
   compressionModel?: ChatModel;
+  urgencyModel?: ChatModel;
   promptTemplates?: PromptTemplateSet;
   onProgress?: (message: string) => void;
   onCompressedOutput?: (output: CompressedOutput) => void;

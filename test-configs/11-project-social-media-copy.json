@@ -1,13 +1,12 @@
 {
-    "topic":  "Systemic cycles of complexity, resource concentration, and social collapse throughout history",
-    "context":  "10-systemic-cycles-complexity-and-collapse.md",
-    "maxRounds":  5,
-    "maxTurns":  32,
+    "topic":  "尊敬的各位思想家，请帮我这个project写一个foreword，这要放在github readme上所以别写太长，太长没人看了",
+    "context":  "11-project-social-media-copy.md",
+    "maxRounds":  2,
     "testMode":  false,
     "discussionMode":  "simple",
     "outputLanguage":  "chinese",
     "globalMindsProvider":  "deepseek-pro",
-    "moderatorProvider":  "deepseek-pro",
+    "moderatorProvider":  "deepseek-flash",
     "compressionProvider":  "deepseek-flash",
     "urgencyProvider":  "deepseek-flash",
     "providers":  {
@@ -21,24 +20,14 @@
                                            "model":  "deepseek-v4-pro",
                                            "apiKeyEnv":  "DEEPSEEK_API_KEY",
                                            "reasoningEffort":  "high"
-                                       },
-                      "openai":  {
-                                     "type":  "openai",
-                                     "model":  "gpt-5.5",
-                                     "apiKeyEnv":  "OPENAI_API_KEY"
-                                 },
-                      "claude":  {
-                                     "type":  "anthropic",
-                                     "model":  "claude-sonnet-4-5",
-                                     "apiKeyEnv":  "ANTHROPIC_API_KEY"
-                                 }
+                                       }
                   },
     "minds":  [
                   {
-                      "personaPath":  "../agents/mao/SKILL.md"
+                      "personaPath":  "../agents/justin-sun/SKILL.md"
                   },
                   {
-                      "personaPath":  "../agents/dalio/SKILL.md"
+                      "personaPath":  "../agents/steve-jobs/SKILL.md"
                   }
               ]
 }

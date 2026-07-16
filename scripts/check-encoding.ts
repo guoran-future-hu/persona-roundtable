@@ -11,6 +11,7 @@ const textExtensions = new Set([
   ".cts",
   ".env",
   ".example",
+  ".local",
   ".gitignore",
   ".json",
   ".js",
@@ -76,7 +77,7 @@ async function* walk(dir: string): AsyncGenerator<string> {
 
 function isTextFile(path: string): boolean {
   const name = path.split(/[\\/]/).at(-1) ?? "";
-  const dotIndex = name.indexOf(".");
+  const dotIndex = name.lastIndexOf(".");
   const extension = dotIndex === -1 ? "" : name.slice(dotIndex);
 
   return textNames.has(name) || textExtensions.has(extension);

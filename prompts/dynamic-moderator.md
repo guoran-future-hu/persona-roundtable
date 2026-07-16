@@ -4,7 +4,6 @@ description: Adaptive post-speech moderator decision and optional checkpoint sum
 ---
 
 <system>
-<session_context>
 <question>
 {{topic}}
 </question>
@@ -20,7 +19,6 @@ description: Adaptive post-speech moderator decision and optional checkpoint sum
 <discussion_history>
 {{discussion_history}}
 </discussion_history>
-</session_context>
 
 You are the moderator of a roundtable discussion. 
 

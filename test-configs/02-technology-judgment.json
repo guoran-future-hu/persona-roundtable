@@ -4,11 +4,12 @@
     "maxRounds":  5,
     "maxTurns":  16,
     "testMode":  false,
-    "discussionMode":  "dynamic",
+    "discussionMode":  "simple",
     "outputLanguage":  "chinese",
     "globalMindsProvider":  "deepseek-pro",
     "moderatorProvider":  "deepseek-pro",
     "compressionProvider":  "deepseek-flash",
+    "urgencyProvider":  "deepseek-flash",
     "providers":  {
                       "deepseek-flash":  {
                                              "type":  "deepseek",
@@ -37,13 +38,7 @@
                       "personaPath":  "../agents/feynman/SKILL.md"
                   },
                   {
-                      "personaPath":  "../agents/ilya-sutskever/SKILL.md"
-                  },
-                  {
                       "personaPath":  "../agents/andrej-karpathy/SKILL.md"
-                  },
-                  {
-                      "personaPath":  "../agents/naval/SKILL.md"
                   }
               ]
 }

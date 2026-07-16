@@ -2,9 +2,8 @@ node_modules/
 sessions/
 dev-logs/
 agents-archive/
-.env
 .env.local
-config.json
+config.local.json
 run.sh
 AGENTS.md
 dev-docs/

@@ -9,6 +9,7 @@
     "globalMindsProvider":  "deepseek-pro",
     "moderatorProvider":  "deepseek-pro",
     "compressionProvider":  "deepseek-flash",
+    "urgencyProvider":  "deepseek-flash",
     "providers":  {
                       "deepseek-flash":  {
                                              "type":  "deepseek",
@@ -43,7 +44,7 @@
                       "personaPath":  "../agents/naval/SKILL.md"
                   },
                   {
-                      "personaPath":  "../agents/munger/SKILL.md"
+                      "personaPath":  "../agents/steve-jobs/SKILL.md"
                   }
               ]
 }

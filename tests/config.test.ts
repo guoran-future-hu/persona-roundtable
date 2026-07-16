@@ -14,6 +14,7 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
     outputLanguage: "Use English.",
     moderatorProvider: "openai",
     compressionProvider: "deepseek",
+    urgencyProvider: "deepseek",
     providers: {
       openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
       deepseek: { type: "deepseek", model: "deepseek-v4-flash", apiKeyEnv: "DEEPSEEK_API_KEY", reasoningEffort: "max" },
@@ -38,6 +39,7 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
   assert.equal(config.testMode, true);
   assert.equal(config.outputLanguage, "Use English.");
   assert.equal(config.compressionProvider, "deepseek");
+  assert.equal(config.urgencyProvider, "deepseek");
   assert.equal(config.providers.openai.type, "openai");
   assert.equal(config.providers.deepseek.reasoningEffort, "max");
   assert.equal(config.minds[0]?.personaPath, "agents/naval-perspective/SKILL.md");
@@ -353,6 +355,24 @@ test("parseSessionConfig rejects unknown compression provider", () => {
         minds: [{ personaPath: "x.md", provider: "openai" }],
       }),
     /compressionProvider 'missing' is not defined in providers/,
+  );
+});
+
+test("parseSessionConfig rejects unknown urgency provider", () => {
+  assert.throws(
+    () =>
+      parseSessionConfig({
+        topic: "A question",
+        context: {},
+        maxRounds: 5,
+        moderatorProvider: "openai",
+        urgencyProvider: "missing",
+        providers: {
+          openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+        },
+        minds: [{ personaPath: "x.md", provider: "openai" }],
+      }),
+    /urgencyProvider 'missing' is not defined in providers/,
   );
 });
 

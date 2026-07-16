@@ -34,6 +34,7 @@ export interface SessionConfig {
   globalMindsProvider?: string;
   moderatorProvider: string;
   compressionProvider?: string;
+  urgencyProvider?: string;
   providers: Record<string, ProviderConfig>;
   minds: MindConfig[];
   disabledMinds?: MindConfig[];
@@ -94,6 +95,7 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
   const globalMindsProvider = parseOptionalProvider(config.globalMindsProvider, "globalMindsProvider");
   const moderatorProvider = expectString(config.moderatorProvider, "moderatorProvider");
   const compressionProvider = parseOptionalProvider(config.compressionProvider, "compressionProvider");
+  const urgencyProvider = parseOptionalProvider(config.urgencyProvider, "urgencyProvider");
   const providers = parseProviders(config.providers);
   const minds = parseMinds(config.minds, "minds", { defaultProvider: globalMindsProvider });
   const disabledMinds =
@@ -121,6 +123,10 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     throw new Error(`compressionProvider '${compressionProvider}' is not defined in providers`);
   }
 
+  if (urgencyProvider !== undefined && !providers[urgencyProvider]) {
+    throw new Error(`urgencyProvider '${urgencyProvider}' is not defined in providers`);
+  }
+
   for (const mind of minds) {
     if (!providers[mind.provider]) {
       throw new Error(`mind '${mind.personaPath}' references unknown provider '${mind.provider}'`);
@@ -144,6 +150,7 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     globalMindsProvider,
     moderatorProvider,
     compressionProvider,
+    urgencyProvider,
     providers,
     minds,
     disabledMinds,

@@ -118,6 +118,7 @@ export function renderDevLog(config: SessionConfig, result: SessionResult, creat
         globalMindsProvider: config.globalMindsProvider,
         moderatorProvider: config.moderatorProvider,
         compressionProvider: config.compressionProvider,
+        urgencyProvider: config.urgencyProvider,
         minds: config.minds,
         disabledMinds: config.disabledMinds ?? [],
       },

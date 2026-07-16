@@ -10,6 +10,9 @@ export function createModels(config: LoadedSessionConfig): Record<string, ChatMo
   if (config.compressionProvider !== undefined) {
     requiredProviders.add(config.compressionProvider);
   }
+  if (config.urgencyProvider !== undefined) {
+    requiredProviders.add(config.urgencyProvider);
+  }
   const models: Record<string, ChatModel> = {};
 
   for (const providerName of requiredProviders) {

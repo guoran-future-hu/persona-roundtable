@@ -4,7 +4,6 @@ description: Moderator final synthesis after the discussion ends.
 ---
 
 <system>
-<session_context>
 <question>
 {{topic}}
 </question>
@@ -20,7 +19,6 @@ description: Moderator final synthesis after the discussion ends.
 <discussion_history>
 {{discussion_history}}
 </discussion_history>
-</session_context>
 
 You are the moderator of a roundtable discussion.
 

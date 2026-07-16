@@ -70,7 +70,7 @@ export async function selectNextByUrgency({
         urgency: await generateStructuredAndLog({
           phase: urgencyPhase(afterTurnNumber),
           speaker: mind.name,
-          model: mind.model,
+          model: options.urgencyModel ?? mind.model,
           messages,
           modelCalls,
           generateOptions: { maxOutputTokens: 128, thinkingEnabled: false },
