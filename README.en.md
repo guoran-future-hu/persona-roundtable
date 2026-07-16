@@ -10,7 +10,7 @@
 
 <img src="./hero-image.png" alt="Persona Roundtable" width="70%">
 
-🇨🇳 [中文版](README.md)
+### [🇨🇳 中文版 →](README.md)
 
 </div>
 
@@ -28,26 +28,6 @@ Or just watch them fight. It is fun anyway.
 
 ---
 
-### I asked the Steve Jobs persona to write this introduction
-
-> Most people think they're thinking when really they're just rehearsing their one perspective. That's not thinking. That's being trapped in dogma—living with the results of other people's thinking™.
->
-> The Persona Roundtable forces you to do what Picasso, Einstein, and da Vinci did naturally: connect dots from wildly different points of view. Feynman doesn't think like me. I don't think like Naval. And that's the point. You don't get wisdom from one smart person agreeing with you. You get it when your assumptions get punched in the face by someone who sees what you're too close to see.
->
-> "单视角听鸡汤，多视角出真知。" Exactly. The Chinese got this one right.
->
-> When we created the Mac, the iPod, the iPhone—nobody in that room agreed on everything. That was the magic. We built products that made our hearts sing precisely because we fought about every pixel, every interaction, every "good enough" that wasn't.
->
-> This tool is a bicycle for your mind. Use it when you're stuck. Use it when you're too comfortable. Use it when your gut says you're missing something but you don't know what.
->
-> And for God's sake—don't just read the transcript. Let the disagreement change your mind. That's the whole widget.
->
-> *— Steve Jobs, called in for a roundtable by an anonymous nobody who probably dropped out of college too*
-
-I haven't dropped out yet, though.
-
----
-
 <div align="center">
 
 <a href="#overview">📖 Overview</a>　·　<a href="#usage">🚀 Usage</a>　·　<a href="#examples">✨ Examples</a>
@@ -60,7 +40,10 @@ I haven't dropped out yet, though.
 
 - configures a question and context for a roundtable;
 - invites multiple AI minds and routes them to your chosen providers;
-- asks a moderator to summarize throughout the discussion and produce a cross-perspective conclusion.
+- let the minds carry out a spicy and heated argument;
+- have a moderator to summarize throughout the discussion and produce a cross-perspective conclusion.
+
+**Richer context and stronger model supports higher discussion quality.**
 
 It supports two discussion modes:
 
@@ -69,14 +52,33 @@ It supports two discussion modes:
 - Minds speak in a fixed order.
 - The moderator summarizes after each round.
 - The order and total number of rounds are fixed.
-- A polite, well-behaved “practice discussion”—though people still end up arguing.
+- A polite, well-behaved discussion—though the minds still end up arguing.
 
 **`dynamic`**
 
-- Minds can nominate the next speaker.
+- Minds can invite the next speaker.
 - After each turn, minds express how urgently they want to respond; the system chooses the next speaker dynamically.
 - The moderator summarizes progress or ends the roundtable early.
-- A genuinely heated discussion.
+- A dynamic and heated discussion.
+
+### I asked the Steve Jobs persona to generate this introduction
+
+> Most people think they're thinking when really they're just rehearsing their one perspective. That's not thinking. That's being trapped in dogma—living with the results of other people's thinking™.
+>
+> The Persona Roundtable forces you to do what Picasso, Einstein, and da Vinci did naturally: connect dots from wildly different points of view. Feynman doesn't think like me. I don't think like Naval. And that's the point. You don't get wisdom from one smart person agreeing with you. You get it when your assumptions get punched in the face by someone who sees what you're too close to see.
+>
+> "One perspective gives you a story, several give you insight." Exactly. The author got this one right.
+>
+> When we created the Mac, the iPod, the iPhone—nobody in that room agreed on everything. That was the magic. We built products that made our hearts sing precisely because we fought about every pixel, every interaction, every "good enough" that wasn't.
+>
+> This tool is a bicycle for your mind. Use it when you're stuck. Use it when you're too comfortable. Use it when your gut says you're missing something but you don't know what.
+>
+> And for God's sake—don't just read the transcript. Let the disagreement change your mind. That's the whole widget.
+>
+> *— Steve Jobs, called in for a roundtable by an anonymous nobody who probably dropped out of college too*
+
+I haven't dropped out yet, though.
+
 
 ## Examples
 
