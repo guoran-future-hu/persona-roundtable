@@ -279,12 +279,12 @@ test("parseSessionConfig rejects unsupported reasoning effort values", () => {
             type: "deepseek",
             model: "deepseek-v4-flash",
             apiKeyEnv: "DEEPSEEK_API_KEY",
-            reasoningEffort: "medium",
+            reasoningEffort: "turbo",
           },
         },
         minds: [{ personaPath: "x.md", provider: "deepseek" }],
       }),
-    /reasoningEffort must be 'high' or 'max'/,
+    /reasoningEffort must be one of/,
   );
 });
 

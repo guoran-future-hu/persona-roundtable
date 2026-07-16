@@ -2,13 +2,14 @@ import { dirname, resolve } from "node:path";
 import { readUtf8Text } from "./text-io";
 
 export type ProviderType = "openai" | "codex" | "anthropic" | "claude" | "deepseek" | "openrouter";
+export type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "max" | "xhigh";
 export type DiscussionMode = "simple" | "dynamic";
 
 export interface ProviderConfig {
   type: ProviderType;
   model: string;
   apiKeyEnv: string;
-  reasoningEffort?: "high" | "max";
+  reasoningEffort?: ReasoningEffort;
 }
 
 export interface MindConfig {
@@ -211,16 +212,16 @@ function parseProviders(value: unknown): Record<string, ProviderConfig> {
   return parsed;
 }
 
-function parseReasoningEffort(value: unknown, label: string): "high" | "max" | undefined {
+function parseReasoningEffort(value: unknown, label: string): ReasoningEffort | undefined {
   if (value === undefined) {
     return undefined;
   }
 
-  if (value === "high" || value === "max") {
+  if (value === "none" || value === "minimal" || value === "low" || value === "medium" || value === "high" || value === "max" || value === "xhigh") {
     return value;
   }
 
-  throw new Error(`${label} must be 'high' or 'max'`);
+  throw new Error(`${label} must be one of 'none', 'minimal', 'low', 'medium', 'high', 'max', or 'xhigh'`);
 }
 
 function parseOptionalProvider(value: unknown, label: string): string | undefined {

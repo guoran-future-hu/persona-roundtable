@@ -1,8 +1,9 @@
-import type { ChatMessage, ChatModel, GenerateOptions, HttpFetch } from "./types";
+import type { ChatMessage, ChatModel, GenerateOptions, HttpFetch, ReasoningEffort } from "./types";
 
 export interface AnthropicModelOptions {
   apiKey: string;
   model: string;
+  reasoningEffort?: ReasoningEffort;
   fetch?: HttpFetch;
 }
 
@@ -10,11 +11,13 @@ export class AnthropicModel implements ChatModel {
   readonly provider = "anthropic";
   readonly model: string;
   private readonly apiKey: string;
+  private readonly reasoningEffort?: ReasoningEffort;
   private readonly fetch: HttpFetch;
 
   constructor(options: AnthropicModelOptions) {
     this.apiKey = options.apiKey;
     this.model = options.model;
+    this.reasoningEffort = options.reasoningEffort;
     this.fetch = options.fetch ?? fetch;
   }
 
@@ -35,8 +38,17 @@ export class AnthropicModel implements ChatModel {
       max_tokens: options.maxOutputTokens ?? 1400,
       system,
       messages: conversation,
-      ...(options.thinkingEnabled === false ? { thinking: { type: "disabled" } } : {}),
-      ...(options.structuredOutput ? { output_config: { format: { type: "json_schema", schema: options.structuredOutput.schema } } } : {}),
+      ...(options.thinkingEnabled === false || this.reasoningEffort === "none"
+        ? { thinking: { type: "disabled" } }
+        : {}),
+      ...(options.structuredOutput || (this.reasoningEffort !== undefined && this.reasoningEffort !== "none")
+        ? {
+            output_config: {
+              ...(this.reasoningEffort !== undefined && this.reasoningEffort !== "none" ? { effort: this.reasoningEffort } : {}),
+              ...(options.structuredOutput ? { format: { type: "json_schema", schema: options.structuredOutput.schema } } : {}),
+            },
+          }
+        : {}),
     };
 
     const response = await this.fetch("https://api.anthropic.com/v1/messages", {

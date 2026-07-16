@@ -1,0 +1,31 @@
+{
+  "topic": "What should a small team build with AI in the next six months?",
+  "context": "A four-person team has six months, a modest budget, and access to current AI tools. They must choose among a focused customer product, an open-source developer tool, or a research prototype. Compare user value, speed, defensibility, learning potential, and responsible deployment. Make assumptions explicit and end with a concrete recommendation.",
+  "maxRounds": 5,
+  "discussionMode": "simple",
+  "testMode": false,
+  "outputLanguage": "chinese",
+  "globalMindsProvider": "gpt-terra",
+  "moderatorProvider": "gpt-terra",
+  "compressionProvider": "gpt-luna",
+  "urgencyProvider": "gpt-luna",
+  "providers": {
+    "gpt-terra": {
+      "type": "openrouter",
+      "model": "openai/gpt-5.6-terra",
+      "apiKeyEnv": "OPENROUTER_API_KEY"
+    },
+    "gpt-luna": {
+      "type": "openrouter",
+      "model": "openai/gpt-5.6-luna",
+      "apiKeyEnv": "OPENROUTER_API_KEY"
+    }
+  },
+  "minds": [
+    { "personaPath": "agents/feynman/SKILL.md" },
+    { "personaPath": "agents/andrej-karpathy/SKILL.md" },
+    { "personaPath": "agents/naval/SKILL.md" },
+    { "personaPath": "agents/paul-graham/SKILL.md" }
+  ],
+  "disabledMinds": []
+}

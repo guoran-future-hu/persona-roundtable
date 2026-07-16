@@ -1,10 +1,10 @@
-import type { ChatMessage, ChatModel, GenerateOptions, HttpFetch } from "./types";
+import type { ChatMessage, ChatModel, GenerateOptions, HttpFetch, ReasoningEffort } from "./types";
 
 export interface DeepSeekModelOptions {
   apiKey: string;
   model: string;
   fetch?: HttpFetch;
-  reasoningEffort?: "high" | "max";
+  reasoningEffort?: ReasoningEffort;
 }
 
 export class DeepSeekModel implements ChatModel {
@@ -12,7 +12,7 @@ export class DeepSeekModel implements ChatModel {
   readonly model: string;
   private readonly apiKey: string;
   private readonly fetch: HttpFetch;
-  private readonly reasoningEffort: "high" | "max";
+  private readonly reasoningEffort: ReasoningEffort;
 
   constructor(options: DeepSeekModelOptions) {
     this.apiKey = options.apiKey;
@@ -22,7 +22,7 @@ export class DeepSeekModel implements ChatModel {
   }
 
   async generate(messages: ChatMessage[], options: GenerateOptions = {}): Promise<string> {
-    const thinkingEnabled = options.thinkingEnabled !== false;
+    const thinkingEnabled = options.thinkingEnabled !== false && this.reasoningEffort !== "none";
     const body = {
       model: this.model,
       messages: messages.map((message) => ({

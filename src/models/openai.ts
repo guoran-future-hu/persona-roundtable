@@ -1,8 +1,9 @@
-import type { ChatMessage, ChatModel, GenerateOptions, HttpFetch } from "./types";
+import type { ChatMessage, ChatModel, GenerateOptions, HttpFetch, ReasoningEffort } from "./types";
 
 export interface OpenAIModelOptions {
   apiKey: string;
   model: string;
+  reasoningEffort?: ReasoningEffort;
   fetch?: HttpFetch;
 }
 
@@ -10,11 +11,13 @@ export class OpenAIModel implements ChatModel {
   readonly provider = "openai";
   readonly model: string;
   private readonly apiKey: string;
+  private readonly reasoningEffort?: ReasoningEffort;
   private readonly fetch: HttpFetch;
 
   constructor(options: OpenAIModelOptions) {
     this.apiKey = options.apiKey;
     this.model = options.model;
+    this.reasoningEffort = options.reasoningEffort;
     this.fetch = options.fetch ?? fetch;
   }
 
@@ -25,7 +28,9 @@ export class OpenAIModel implements ChatModel {
         role: message.role,
         content: message.content,
       })),
-      ...(options.thinkingEnabled === false ? { reasoning: { effort: "none" } } : {}),
+      ...(options.thinkingEnabled === false || this.reasoningEffort !== undefined
+        ? { reasoning: { effort: options.thinkingEnabled === false ? "none" : this.reasoningEffort } }
+        : {}),
       ...(options.structuredOutput ? { text: { format: { type: "json_schema", name: options.structuredOutput.name, strict: true, schema: options.structuredOutput.schema } } } : {}),
       max_output_tokens: options.maxOutputTokens ?? 1400,
     };

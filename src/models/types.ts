@@ -1,4 +1,5 @@
 export type MessageRole = "developer" | "system" | "user" | "assistant";
+export type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "max" | "xhigh";
 
 export interface ChatMessage {
   role: MessageRole;

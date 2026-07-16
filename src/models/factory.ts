@@ -29,17 +29,17 @@ export function createModels(config: LoadedSessionConfig): Record<string, ChatMo
     }
 
     if (provider.type === "openai" || provider.type === "codex") {
-      models[providerName] = new OpenAIModel({ apiKey, model: provider.model });
+      models[providerName] = new OpenAIModel({ apiKey, model: provider.model, reasoningEffort: provider.reasoningEffort });
       continue;
     }
 
     if (provider.type === "anthropic" || provider.type === "claude") {
-      models[providerName] = new AnthropicModel({ apiKey, model: provider.model });
+      models[providerName] = new AnthropicModel({ apiKey, model: provider.model, reasoningEffort: provider.reasoningEffort });
       continue;
     }
 
     if (provider.type === "openrouter") {
-      models[providerName] = new OpenRouterModel({ apiKey, model: provider.model });
+      models[providerName] = new OpenRouterModel({ apiKey, model: provider.model, reasoningEffort: provider.reasoningEffort });
       continue;
     }
 
