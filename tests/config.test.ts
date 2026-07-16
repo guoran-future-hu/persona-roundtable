@@ -179,6 +179,37 @@ test("parseSessionConfig defaults testMode to false", () => {
   assert.equal(config.compressionProvider, undefined);
 });
 
+test("parseSessionConfig defaults compressionEnabled to true", () => {
+  const config = parseSessionConfig({
+    topic: "A question",
+    context: "rich context",
+    maxRounds: 5,
+    moderatorProvider: "openai",
+    providers: {
+      openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+    },
+    minds: [{ personaPath: "personas/naval-perspective/SKILL.md", provider: "openai" }],
+  });
+
+  assert.equal(config.compressionEnabled, true);
+});
+
+test("parseSessionConfig allows compression to be disabled", () => {
+  const config = parseSessionConfig({
+    topic: "A question",
+    context: "rich context",
+    maxRounds: 5,
+    compressionEnabled: false,
+    moderatorProvider: "openai",
+    providers: {
+      openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+    },
+    minds: [{ personaPath: "personas/naval-perspective/SKILL.md", provider: "openai" }],
+  });
+
+  assert.equal(config.compressionEnabled, false);
+});
+
 test("parseSessionConfig rejects missing maxRounds", () => {
   assert.throws(
     () =>

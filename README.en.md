@@ -30,7 +30,7 @@ Or just watch them fight. It is fun anyway.
 
 <div align="center">
 
-<a href="#overview">📖 Overview</a>　·　<a href="#usage">🚀 Usage</a>　·　<a href="#examples">✨ Examples</a>
+<a href="#overview">📖 Overview</a>　·　<a href="#how-it-works">🧭 How it works</a>　·　<a href="#usage">🚀 Usage</a>　·　<a href="#examples">✨ Examples</a>
 
 </div>
 
@@ -43,7 +43,7 @@ Or just watch them fight. It is fun anyway.
 - let the minds carry out a spicy and heated argument;
 - have a moderator to summarize throughout the discussion and produce a cross-perspective conclusion.
 
-**Richer context and stronger model supports higher discussion quality.**
+**Richer context and stronger models generally lead to higher-quality discussions.**
 
 It supports two discussion modes:
 
@@ -146,7 +146,7 @@ Moderator ❯ Complexity is not the problem; missing feedback and correction tur
 
 3. **Prepare a config**
 
-   Copy `config.json`, then edit the topic, context, minds, providers, and discussion mode. Keep your changes in the copy.
+   Copy `config.json`, then edit the topic, context, minds, providers, and discussion mode. The repository also includes `config-cn.json` and `config-en.json` language variants.
 
 4. **Run a discussion**
 
@@ -158,7 +158,7 @@ Moderator ❯ Complexity is not the problem; missing feedback and correction tur
    npm run roundtable -- --config config-custom.json
    ```
 
-5. **Run without an API (optional)**
+5. **Run without an API for testing (optional)**
 
    Add `--test-mode`:
 
@@ -166,9 +166,29 @@ Moderator ❯ Complexity is not the problem; missing feedback and correction tur
    npm run roundtable -- --config config.json --test-mode
    ```
 
-6. **Find the result**
+6. **Enable debug output (optional)**
+
+   By default, only the full transcript is saved. Add `--debug` (or `--debug-mode`) to save the development log and speaker-count report:
+
+   ```bash
+   npm run roundtable -- --config config.json --debug
+   ```
+
+7. **Find the result**
 
    Sessions are saved under `sessions/`. The `test-configs/` directory contains ready-to-reference topics and invited minds.
+
+## How it works
+
+All four parts below make model calls:
+
+- **Minds**: each persona in `minds` thinks and speaks from its own cognitive framework. They are routed through `globalMindsProvider` by default, or through an individual provider when configured.
+
+- **Moderator**: the `moderatorProvider` summarizes the discussion. In `simple` mode it reviews each round; in `dynamic` mode it checks the state, summarizes when useful, or ends the discussion early. It produces the final cross-perspective summary at the end.
+
+- **Compressor**: `compressionProvider` selects the model that turns persona and moderator outputs into short live summaries. This makes it easier to monitor a running CLI session; it only affects the live display and never replaces the full transcript. `compressionEnabled` defaults to `true`.
+
+- **Urgency vote**: in `dynamic` mode, after each turn, minds report `no_new_comment`, `minor_update`, or `strong_need_to_respond`. The system normally selects the highest urgency; a direct invitation from the previous speaker takes priority.
 
 ### Configuration
 
@@ -177,7 +197,9 @@ The root `config.json` is the default discussion:
 - `topic`: the question to discuss
 - `context`: background and constraints; use inline text or a `.md` path relative to the config. The whole file is provided as context.
 - `minds`: persona paths
+- `outputLanguage`: the main display language, such as `chinese` or `english`; it is read directly by the model rather than hard-coded.
 - `globalMindsProvider`, `moderatorProvider`: use capable reasoning models
+- `compressionEnabled`: whether to enable live CLI compression; defaults to `true`, and `false` shows raw outputs
 - `compressionProvider`, `urgencyProvider`: use lightweight models
 - `discussionMode`: `simple` or `dynamic`; dynamic requires at least three minds
 - `maxRounds`: maximum rounds in `simple` mode

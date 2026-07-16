@@ -30,7 +30,7 @@
 
 <div align="center">
 
-<a href="#项目简介">📖 项目简介</a>　·　<a href="#如何使用">🚀 如何使用</a>　·　<a href="#效果示例">✨ 效果示例</a>
+<a href="#项目简介">📖 项目简介</a>　·　<a href="#项目是怎么工作的">🧭 工作原理</a>　·　<a href="#如何使用">🚀 如何使用</a>　·　<a href="#效果示例">✨ 效果示例</a>
 
 </div>
 
@@ -175,7 +175,7 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
 
 3. **准备配置文件**
 
-   把 `config.json` 复制成自己的配置文件，并按需修改主题、背景、人格、模型和讨论模式。让 Agent 只修改副本。
+   把 `config.json` 复制成自己的配置文件，并按需修改主题、背景、人格、模型和讨论模式。仓库也提供 `config-cn.json` 和 `config-en.json` 两个语言版本。
 
 4. **运行讨论**
 
@@ -195,9 +195,29 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
    npm run roundtable -- --config config.json --test-mode
    ```
 
-6. **查看结果**
+6. **调试输出（可选）**
+
+   默认只保存完整 transcript。需要开发日志和发言统计时，加上 `--debug`（或 `--debug-mode`）：
+
+   ```bash
+   npm run roundtable -- --config config.json --debug
+   ```
+
+7. **查看结果**
 
    讨论记录会保存到 `sessions/`。`test-configs/` 提供了一些可参考的讨论主题和参与人格。
+
+## 运行原理
+
+下面四个环节都会调用模型：
+
+- **Minds**：`minds` 里的每个人格负责从自己的认知框架出发思考和发言。默认由 `globalMindsProvider` 路由，也可以给单个人格指定 provider。
+
+- **Moderator**：主持人使用 `moderatorProvider`。在 `simple` 模式下，每轮发言后总结进展；在 `dynamic` 模式下，根据讨论状态进行阶段性总结或提前结束；最后再给出跨视角的总总结。
+
+- **Compressor**：`compressionProvider` 指定模型，将人格和主持人的发言即时压成短摘要。方便在 CLI 监控讨论进度；此功能只影响实时显示，不会替换完整 transcript。`compressionEnabled` 默认是 `true`。
+
+- **Urgency vote**：`dynamic` 模式下，每次发言后，人格会投票表示自己是 `no_new_comment`、`minor_update` 还是 `strong_need_to_respond`。系统优先选择回应紧迫度最高的人；如果上一位人格直接邀请了下一位，则先按邀请继续。
 
 ### 配置说明
 
@@ -206,7 +226,9 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
 - `topic`：讨论的问题
 - `context`：相关背景和细节；可直接填写文字，也可填写相对于 config 文件的 `.md` 路径。运行时会读取 `.md` 作为上下文
 - `minds`：参与讨论的人格
+- `outputLanguage`：主要的显示语言，例如 `chinese` 或 `english`，由模型直接读取，没有硬编码。
 - `globalMindsProvider`、`moderatorProvider`：推荐使用支持 reasoning 的主力模型
+- `compressionEnabled`：CLI 实时压缩，默认 `true`；设为 `false` 时直接显示原始发言
 - `compressionProvider`、`urgencyProvider`：推荐使用轻量小模型
 - `discussionMode`：`simple` 或 `dynamic`；动态模式至少需要 3 位人格
 - `maxRounds`：`simple` 模式的最大讨论轮数。建议不要设置太高，避免后期的历史记录太长，影响模型注意力

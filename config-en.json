@@ -4,7 +4,7 @@
   "maxRounds": 5,
   "discussionMode": "dynamic",
   "testMode": false,
-  "outputLanguage": "chinese",
+  "outputLanguage": "english",
   "globalMindsProvider": "deepseek-pro",
   "moderatorProvider": "deepseek-pro",
   "compressionEnabled": true,

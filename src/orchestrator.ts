@@ -120,11 +120,12 @@ export async function runRoundtableSession(
   minds: LoadedMind[],
   options: RunOptions,
 ): Promise<SessionResult> {
+  const effectiveOptions = config.compressionEnabled === false ? { ...options, compressionModel: undefined } : options;
   if ((config.discussionMode ?? "simple") === "dynamic") {
-    return runDynamicRoundtableSession(config, minds, options);
+    return runDynamicRoundtableSession(config, minds, effectiveOptions);
   }
 
-  return runSimpleRoundtableSession(config, minds, options);
+  return runSimpleRoundtableSession(config, minds, effectiveOptions);
 }
 
 async function runSimpleRoundtableSession(

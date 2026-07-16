@@ -34,6 +34,7 @@ export interface SessionConfig {
   outputLanguage?: string;
   globalMindsProvider?: string;
   moderatorProvider: string;
+  compressionEnabled?: boolean;
   compressionProvider?: string;
   urgencyProvider?: string;
   providers: Record<string, ProviderConfig>;
@@ -95,6 +96,7 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
 
   const globalMindsProvider = parseOptionalProvider(config.globalMindsProvider, "globalMindsProvider");
   const moderatorProvider = expectString(config.moderatorProvider, "moderatorProvider");
+  const compressionEnabled = config.compressionEnabled === undefined ? true : expectBoolean(config.compressionEnabled, "compressionEnabled");
   const compressionProvider = parseOptionalProvider(config.compressionProvider, "compressionProvider");
   const urgencyProvider = parseOptionalProvider(config.urgencyProvider, "urgencyProvider");
   const providers = parseProviders(config.providers);
@@ -150,6 +152,7 @@ export function parseSessionConfig(value: unknown): ParsedSessionConfig {
     outputLanguage,
     globalMindsProvider,
     moderatorProvider,
+    compressionEnabled,
     compressionProvider,
     urgencyProvider,
     providers,

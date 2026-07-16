@@ -36,7 +36,7 @@ export function createDummyModels(config: LoadedSessionConfig): Record<string, C
   }
 
   function pushCompression(response: string): void {
-    if (config.compressionProvider !== undefined) {
+    if (config.compressionEnabled !== false && config.compressionProvider !== undefined) {
       push(config.compressionProvider, response);
     }
   }
@@ -60,7 +60,7 @@ export function createDummyModels(config: LoadedSessionConfig): Record<string, C
 
 function createDynamicDummyModels(config: LoadedSessionConfig): Record<string, ChatModel> {
   return Object.fromEntries(
-    [...new Set([config.moderatorProvider, ...config.minds.map((mind) => mind.provider), config.compressionProvider, config.urgencyProvider])]
+    [...new Set([config.moderatorProvider, ...config.minds.map((mind) => mind.provider), config.compressionEnabled === false ? undefined : config.compressionProvider, config.urgencyProvider])]
       .filter((providerName): providerName is string => providerName !== undefined)
       .map((providerName) => [providerName, new DynamicDummyModel(config, providerName)]),
   );

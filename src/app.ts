@@ -24,21 +24,19 @@ async function main(): Promise<void> {
     throw new Error(`Config file not found: ${configPath}. Create config.json or pass --config <path>.`);
   }
 
-  console.log("Richer context gives the minds more to work with; edit the context fields in the session JSON before running.");
-
   const loadedConfig = await loadSessionConfig(configPath);
   const config = args.testMode ? { ...loadedConfig, testMode: true } : loadedConfig;
   const models = config.testMode ? createDummyModels(config) : createModels(config);
   const minds = await loadMinds(config, models);
   const moderatorModel = models[config.moderatorProvider];
-  const compressionModel = config.compressionProvider === undefined ? undefined : models[config.compressionProvider];
+  const compressionModel = config.compressionEnabled === false || config.compressionProvider === undefined ? undefined : models[config.compressionProvider];
   const urgencyModel = config.urgencyProvider === undefined ? undefined : models[config.urgencyProvider];
 
   if (!moderatorModel) {
     throw new Error(`No model configured for moderator provider '${config.moderatorProvider}'`);
   }
 
-  if (config.compressionProvider !== undefined && !compressionModel) {
+  if (config.compressionEnabled !== false && config.compressionProvider !== undefined && !compressionModel) {
     throw new Error(`No model configured for compression provider '${config.compressionProvider}'`);
   }
 
@@ -62,24 +60,32 @@ async function main(): Promise<void> {
 
   const result = await runRoundtableSession(config, minds, runOptions).catch(async (error: unknown) => {
     if (error instanceof SessionRunError) {
-      const { transcriptPath, devLogPath, speakerCountLogPath } = await saveTranscript(config, error.partialResult, "sessions", liveTranscriptPath);
+      const { transcriptPath, devLogPath, speakerCountLogPath } = await saveTranscript(config, error.partialResult, "sessions", liveTranscriptPath, { debug: args.debugMode });
       console.error(`Partial transcript saved: ${transcriptPath}`);
-      console.error(`Partial dev log saved: ${devLogPath}`);
-      console.error(`Speaker counts saved: ${speakerCountLogPath}`);
+      if (devLogPath !== undefined) {
+        console.error(`Partial dev log saved: ${devLogPath}`);
+      }
+      if (speakerCountLogPath !== undefined) {
+        console.error(`Speaker counts saved: ${speakerCountLogPath}`);
+      }
     }
 
     throw error;
   });
 
-  const { transcriptPath, devLogPath, speakerCountLogPath } = await saveTranscript(config, result, "sessions", liveTranscriptPath);
+  const { transcriptPath, devLogPath, speakerCountLogPath } = await saveTranscript(config, result, "sessions", liveTranscriptPath, { debug: args.debugMode });
   console.log(`Session ended: ${result.stopReason ?? "Discussion ended."}`);
   console.log(`Transcript saved: ${transcriptPath}`);
-  console.log(`Dev log saved: ${devLogPath}`);
-  console.log(`Speaker counts saved: ${speakerCountLogPath}`);
+  if (devLogPath !== undefined) {
+    console.log(`Dev log saved: ${devLogPath}`);
+  }
+  if (speakerCountLogPath !== undefined) {
+    console.log(`Speaker counts saved: ${speakerCountLogPath}`);
+  }
 }
 
-function parseArgs(args: string[]): { config?: string; envFile?: string; help: boolean; testMode?: boolean } {
-  const parsed: { config?: string; envFile?: string; help: boolean; testMode?: boolean } = { help: false };
+function parseArgs(args: string[]): { config?: string; envFile?: string; help: boolean; testMode?: boolean; debugMode?: boolean } {
+  const parsed: { config?: string; envFile?: string; help: boolean; testMode?: boolean; debugMode?: boolean } = { help: false };
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -118,6 +124,11 @@ function parseArgs(args: string[]): { config?: string; envFile?: string; help: b
       continue;
     }
 
+    if (arg === "--debug" || arg === "--debug-mode") {
+      parsed.debugMode = true;
+      continue;
+    }
+
     throw new Error(`Unknown argument: ${arg}`);
   }
 
@@ -135,6 +146,7 @@ Usage:
 The JSON config is the single source of truth for a session. Put the topic and rich context there.
 The default files are config.json and .env. Use --config and --env-file to select alternate files explicitly.
 Use --test-mode to force deterministic dummy models for a single run.
+Use --debug to save the development log and speaker-count report; they are disabled by default.
 Richer context gives the minds more to work with: goals, constraints, values, history, and current circumstances.
 `);
 }

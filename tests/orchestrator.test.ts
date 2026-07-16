@@ -383,6 +383,26 @@ test("orchestrator emits speaker outputs when compression is disabled", async ()
   assert.deepEqual(compressedOutputs, []);
 });
 
+test("orchestrator honors compressionEnabled=false even when a model is supplied", async () => {
+  const oneRoundConfig = { ...config, maxRounds: 1, compressionEnabled: false };
+  const navalModel = new FakeModel("Naval");
+  const pgModel = new FakeModel("PG");
+  const moderatorModel = new FakeModel("Moderator", [review(1)]);
+  const compressionModel = new FakeModel("Compression");
+  const compressedOutputs: CompressedOutput[] = [];
+  const minds = [makeMind("naval", "Naval", navalModel), makeMind("pg", "Paul Graham", pgModel)];
+
+  const result = await runRoundtableSession(oneRoundConfig, minds, {
+    moderatorModel,
+    compressionModel,
+    onCompressedOutput: (output) => compressedOutputs.push(output),
+  });
+
+  assert.equal(compressionModel.calls.length, 0);
+  assert.deepEqual(compressedOutputs, []);
+  assert.doesNotMatch(JSON.stringify(result.modelCalls), /compression/);
+});
+
 test("orchestrator exposes partial result when a primary model call fails", async () => {
   const minds = [makeMind("naval", "Naval", new FakeModel("Naval")), makeMind("pg", "Paul Graham", new FailingModel())];
 

@@ -8,8 +8,12 @@ import { writeUtf8Text } from "./text-io";
 
 export interface SavedSessionPaths {
   transcriptPath: string;
-  devLogPath: string;
-  speakerCountLogPath: string;
+  devLogPath?: string;
+  speakerCountLogPath?: string;
+}
+
+export interface SaveTranscriptOptions {
+  debug?: boolean;
 }
 
 export function createTranscriptPath(config: SessionConfig, outputDir = "sessions", createdAt = new Date()): string {
@@ -31,18 +35,21 @@ export async function saveTranscript(
   result: SessionResult,
   outputDir = "sessions",
   transcriptPathOverride?: string,
+  options: SaveTranscriptOptions = {},
 ): Promise<SavedSessionPaths> {
   await mkdir(outputDir, { recursive: true });
 
   const createdAt = new Date();
   const baseName = `${createdAt.toISOString().replace(/[:.]/g, "-")}-${slugify(config.topic)}`;
   const transcriptPath = transcriptPathOverride ?? resolve(outputDir, `${baseName}.md`);
-  const devLogPath = resolve(outputDir, `${baseName}.dev.md`);
-  const speakerCountLogPath = resolve(outputDir, `${baseName}.speaker-counts.tmp.json`);
+  const devLogPath = options.debug === true ? resolve(outputDir, `${baseName}.dev.md`) : undefined;
+  const speakerCountLogPath = options.debug === true ? resolve(outputDir, `${baseName}.speaker-counts.tmp.json`) : undefined;
 
   await writeUtf8Text(transcriptPath, renderTranscript(config, result, createdAt));
-  await writeUtf8Text(devLogPath, renderDevLog(config, result, createdAt));
-  await writeUtf8Text(speakerCountLogPath, JSON.stringify(renderSpeakerCounts(config, result, createdAt), null, 2));
+  if (devLogPath !== undefined && speakerCountLogPath !== undefined) {
+    await writeUtf8Text(devLogPath, renderDevLog(config, result, createdAt));
+    await writeUtf8Text(speakerCountLogPath, JSON.stringify(renderSpeakerCounts(config, result, createdAt), null, 2));
+  }
 
   return { transcriptPath, devLogPath, speakerCountLogPath };
 }
@@ -117,6 +124,7 @@ export function renderDevLog(config: SessionConfig, result: SessionResult, creat
         outputLanguage: config.outputLanguage,
         globalMindsProvider: config.globalMindsProvider,
         moderatorProvider: config.moderatorProvider,
+        compressionEnabled: config.compressionEnabled !== false,
         compressionProvider: config.compressionProvider,
         urgencyProvider: config.urgencyProvider,
         minds: config.minds,
