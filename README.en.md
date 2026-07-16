@@ -1,0 +1,230 @@
+<div align="center">
+
+# Persona Roundtable
+
+### Let independent AI minds debate, challenge, and synthesize around one question.
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![Runtime: TypeScript](https://img.shields.io/badge/runtime-TypeScript-3178C6.svg)](#usage)
+![Supported Providers](https://img.shields.io/badge/providers-OpenAI%20%7C%20Claude%20%7C%20DeepSeek%20%7C%20OpenRouter-5B5BD6)
+
+<img src="./hero-image.png" alt="Persona Roundtable" width="70%">
+
+🇨🇳 [中文版](README.md)
+
+</div>
+
+We often think we are thinking when we are really repeating familiar opinions.
+
+Our experience, position, and knowledge boundaries shape what we can see. Whether it is a career choice, a technology judgment, a relationship, or a social question, a single perspective can easily mistake one part for the whole.
+
+**Persona Roundtable** lets you invite (the SKILL.md distillation of) great minds—Feynman's decomposition, Jobs's insistence, Naval's leverage—to argue about your question.
+
+Each mind brings a distinct cognitive bias and framework. They challenge one another, helping you escape a single information bubble and make clearer decisions.
+
+**One perspective gives you a story, several give you insight.** Bring the minds to the table and let them argue for you.
+
+Or just watch them fight. It is fun anyway.
+
+---
+
+### I asked the Steve Jobs persona to write this introduction
+
+> Most people think they're thinking when really they're just rehearsing their one perspective. That's not thinking. That's being trapped in dogma—living with the results of other people's thinking™.
+>
+> The Persona Roundtable forces you to do what Picasso, Einstein, and da Vinci did naturally: connect dots from wildly different points of view. Feynman doesn't think like me. I don't think like Naval. And that's the point. You don't get wisdom from one smart person agreeing with you. You get it when your assumptions get punched in the face by someone who sees what you're too close to see.
+>
+> "单视角听鸡汤，多视角出真知。" Exactly. The Chinese got this one right.
+>
+> When we created the Mac, the iPod, the iPhone—nobody in that room agreed on everything. That was the magic. We built products that made our hearts sing precisely because we fought about every pixel, every interaction, every "good enough" that wasn't.
+>
+> This tool is a bicycle for your mind. Use it when you're stuck. Use it when you're too comfortable. Use it when your gut says you're missing something but you don't know what.
+>
+> And for God's sake—don't just read the transcript. Let the disagreement change your mind. That's the whole widget.
+>
+> *— Steve Jobs, called in for a roundtable by an anonymous nobody who probably dropped out of college too*
+
+I haven't dropped out yet, though.
+
+---
+
+<div align="center">
+
+<a href="#overview">📖 Overview</a>　·　<a href="#usage">🚀 Usage</a>　·　<a href="#examples">✨ Examples</a>
+
+</div>
+
+## Overview
+
+`persona-roundtable` is a TypeScript CLI that:
+
+- configures a question and context for a roundtable;
+- invites multiple AI minds and routes them to your chosen providers;
+- asks a moderator to summarize throughout the discussion and produce a cross-perspective conclusion.
+
+It supports two discussion modes:
+
+**`simple`**
+
+- Minds speak in a fixed order.
+- The moderator summarizes after each round.
+- The order and total number of rounds are fixed.
+- A polite, well-behaved “practice discussion”—though people still end up arguing.
+
+**`dynamic`**
+
+- Minds can nominate the next speaker.
+- After each turn, minds express how urgently they want to respond; the system chooses the next speaker dynamically.
+- The moderator summarizes progress or ends the roundtable early.
+- A genuinely heated discussion.
+
+## Examples
+
+*Examples are compressed and simplified.*
+
+### Example 1: AI and consciousness
+
+**Question: Are current AI systems close to being conscious?**
+
+```text
+Round 1
+Feynman   ❯ Do not confuse acting conscious with having subjective experience. Current AI has no body, pain, or continuous inner life.
+Karpathy  ❯ An LLM is a summoned ghost: it can simulate reflection without an internal state.
+Moderator ❯ Both views reject present-day consciousness. Next, define consciousness and make the criteria testable.
+
+Round 2
+Feynman   ❯ Check whether a system maintains continuity after interruption or forms goals without a prompt.
+Karpathy  ❯ Behavior can be simulated. Look for online learning, non-resettable goals, and autonomous behavior.
+Moderator ❯ The discussion has moved from abstraction to engineering tests, but the standards still differ.
+
+Round 3
+Feynman   ❯ Behavioral tests cannot prove subjective experience; the ability to suffer may matter more.
+Karpathy  ❯ Instead of a binary label, observe online objectives and self-preservation.
+Moderator ❯ Current AI is not conscious. Watch autonomy, online learning, and self-maintenance while avoiding projection.
+```
+
+### Example 2: Complex systems and social cycles
+
+**Question: Why can an increasingly efficient society become more fragile?**
+
+```text
+Round 1
+Mao       ❯ Higher productivity does not guarantee broad benefits. Concentrated resources and power accumulate social tension.
+Dalio     ❯ Debt, wealth gaps, and external competition can make a system fragile even at peak efficiency.
+Moderator ❯ Both point to the same risk: growth outpaces the system's ability to correct itself.
+
+Round 2
+Mao       ❯ Cycles are not destiny. Feed local experience into decisions and adjust distribution and institutions.
+Dalio     ❯ Make feedback structural: publish data, run adversarial reviews, and stress-test the system.
+Moderator ❯ The disagreement shifts from who drives change to how feedback is embedded.
+
+Round 3
+Mao       ❯ Institutions should remain responsive and preserve room for participation and correction.
+Dalio     ❯ They also need redundancy, transparent metrics, and independent oversight across generations.
+Moderator ❯ Complexity is not the problem; missing feedback and correction turns efficiency into fragility.
+```
+
+## Usage
+
+**Short version: let your AI agent help you run it.**
+
+1. **Install**
+
+   This project requires a **standalone API key**. Subscription access to ChatGPT, Claude, Cursor, and similar products cannot run it directly.
+
+   ```bash
+   git clone https://github.com/guoran-future-hu/persona-roundtable.git
+   cd persona-roundtable
+   npm install
+   ```
+
+2. **Set your API key**
+
+   Add the key for your provider to `.env`.
+
+3. **Prepare a config**
+
+   Copy `config.json`, then edit the topic, context, minds, providers, and discussion mode. Keep your changes in the copy.
+
+4. **Run a discussion**
+
+   The default config uses DeepSeek:
+
+   ```bash
+   npm run roundtable
+   # or choose a config explicitly
+   npm run roundtable -- --config config-custom.json
+   ```
+
+5. **Run without an API (optional)**
+
+   Add `--test-mode`:
+
+   ```bash
+   npm run roundtable -- --config config.json --test-mode
+   ```
+
+6. **Find the result**
+
+   Sessions are saved under `sessions/`. The `test-configs/` directory contains ready-to-reference topics and invited minds.
+
+### Configuration
+
+The root `config.json` is the default discussion:
+
+- `topic`: the question to discuss
+- `context`: background and constraints; use inline text or a `.md` path relative to the config. The whole file is provided as context.
+- `minds`: persona paths
+- `globalMindsProvider`, `moderatorProvider`: use capable reasoning models
+- `compressionProvider`, `urgencyProvider`: use lightweight models
+- `discussionMode`: `simple` or `dynamic`; dynamic requires at least three minds
+- `maxRounds`: maximum rounds in `simple` mode
+- `maxTurns`: maximum speaker turns in `dynamic` mode; if omitted, defaults to `maxRounds × active minds`
+
+Provider profiles contain the model and environment variable name:
+
+```json
+"providers": {
+  "primary": {
+    "type": "openai",
+    "model": "gpt-5.6-terra",
+    "apiKeyEnv": "OPENAI_API_KEY"
+  }
+}
+```
+
+## Roadmap
+
+- [x] Improve prompting and cache utilization
+- [ ] Compress earlier discussion to improve late-round quality
+- [ ] Support more context sources (multiple files, working directories)
+- [ ] Add web search and other tool-calling features
+- [ ] Add a GUI
+
+## The idea behind the project
+
+Success stories often describe only a few factors from a few angles. Context is lost in communication—or the storyteller never saw it clearly. A strategy that works in one background, environment, or era may fail in another.
+
+But this limitation is not unique to success stories. We fall into it whenever we try to understand anything.
+
+The world is a huge complex system. Any single perspective is incomplete.
+
+By paying attention, we can trace the patterns behind events, notice perspectives we would normally miss, and build a better understanding of the whole.
+
+This project is less a thinking tool than a concrete form of my philosophy and narrative.
+
+Interested in the idea? Visit my [blog](https://guoran-future-hu.github.io/blogs/Causality/).
+
+I often discuss abstract ideas with AI. These days, there are some questions I would rather bring to this roundtable.
+
+## Acknowledgement
+
+This project builds heavily on the work of [Huashu](https://github.com/alchaincyf). Most persona cards come from or are based on his [Nuwa Skill](https://github.com/alchaincyf/nuwa-skill/tree/main).
+
+- `buffett` and `dalio` come from [Panmax/buffett-skill](https://github.com/Panmax/buffett-skill) and [Panmax/dalio-skill](https://github.com/Panmax/dalio-skill).
+- `mao` comes from [leezythu/maoxuan-skill](https://github.com/leezythu/maoxuan-skill), with its acknowledgements preserved.
+- `sun` comes from [0xquqi/sun-skill](https://github.com/0xquqi/sun-skill).
+
+## License
+
+[MIT License](LICENSE)

@@ -1,3 +1,11 @@
+# 09-systemic-cycles-complexity-and-collapse
+
+## Topic
+
+Systemic cycles of complexity, resource concentration, and social collapse throughout history
+## Context
+
+~~~text
 I want to examine a possible recurring pattern in human societies. A society may begin with relatively abundant resources per person, low institutional complexity, and broadly distributed well-being. Over time, it develops more complex systems to improve efficiency and extract additional resources through technological innovation, expanding markets, specialization, or a larger workforce. These gains may come at the cost of citizens’ free time, autonomy, and physical or mental energy.
 
 As complexity increases, resources and decision-making power may also become concentrated among elites. When a society becomes highly optimized for efficiency and continuous growth, it may become increasingly vulnerable to disruptions, especially when new resources or productivity gains are no longer available. During stagnation and crisis, the laboring classes may bear the greatest burden.
@@ -5,3 +13,9 @@ As complexity increases, resources and decision-making power may also become con
 Eventually, the system may experience severe decline and institutional collapse. Afterward, society may return to a less efficient but less complex state, in which resources are more evenly distributed and people may experience greater relative autonomy or well-being.
 
 Are there theories that might explain the pattern better? Are there hidden patterns behind what I see? Is this pattern and structure inevitable?
+~~~
+
+## Invited minds
+
+- mao
+- dalio

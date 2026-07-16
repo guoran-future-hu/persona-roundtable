@@ -1,0 +1,66 @@
+{
+  "topic": "Why I followed successful people's advice, but they not always work?",
+  "context": "I've been hearing many advices from many successful people in my life, some of them tell me work hard pays at the end, some of them tell me be brave and start a company, some of them tell me to follow my heart and work on things I love even if it's not paying well now. They all seems to be correct, yet I followed a few but didn't see the promised outcome.",
+  "maxRounds": 5,
+  "discussionMode": "dynamic",
+  "testMode": false,
+  "outputLanguage": "chinese",
+  "globalMindsProvider": "deepseek-pro",
+  "moderatorProvider": "deepseek-pro",
+  "compressionProvider": "deepseek-flash",
+  "urgencyProvider": "deepseek-flash",
+  "providers": {
+    "deepseek-flash": {
+      "type": "deepseek",
+      "model": "deepseek-v4-flash",
+      "apiKeyEnv": "DEEPSEEK_API_KEY"
+    },
+    "deepseek-pro": {
+      "type": "deepseek",
+      "model": "deepseek-v4-pro",
+      "apiKeyEnv": "DEEPSEEK_API_KEY",
+      "reasoningEffort": "high"
+    },
+    "gpt-terra": {
+      "type": "openai",
+      "model": "gpt-5.6-terra",
+      "apiKeyEnv": "OPENAI_API_KEY",
+      "reasoningEffort": "medium"
+    },
+    "gpt-luna": {
+      "type": "openai",
+      "model": "gpt-5.6-luna",
+      "apiKeyEnv": "OPENAI_API_KEY",
+      "reasoningEffort": "none"
+    },
+    "claude-terra": {
+      "type": "claude",
+      "model": "claude-opus-4-6",
+      "apiKeyEnv": "ANTHROPIC_API_KEY",
+      "reasoningEffort": "medium"
+    },
+    "claude-luna": {
+      "type": "claude",
+      "model": "claude-sonnet-4-6",
+      "apiKeyEnv": "ANTHROPIC_API_KEY",
+      "reasoningEffort": "none"
+    },
+    "openrouter-terra": {
+      "type": "openrouter",
+      "model": "openai/gpt-5.6-terra",
+      "apiKeyEnv": "OPENROUTER_API_KEY"
+    },
+    "openrouter-luna": {
+      "type": "openrouter",
+      "model": "openai/gpt-5.6-luna",
+      "apiKeyEnv": "OPENROUTER_API_KEY"
+    }
+  },
+  "minds": [
+    { "personaPath": "personas/feynman/SKILL.md" },
+    { "personaPath": "personas/naval/SKILL.md" },
+    { "personaPath": "personas/paul-graham/SKILL.md" },
+    { "personaPath": "personas/dalio/SKILL.md" }
+  ],
+  "disabledMinds": []
+}

@@ -21,13 +21,13 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
     },
     minds: [
       {
-        personaPath: "agents/naval-perspective/SKILL.md",
+        personaPath: "personas/naval-perspective/SKILL.md",
         provider: "openai",
       },
     ],
     disabledMinds: [
       {
-        personaPath: "agents/feynman-perspective/SKILL.md",
+        personaPath: "personas/feynman-perspective/SKILL.md",
         provider: "deepseek",
       },
     ],
@@ -42,8 +42,8 @@ test("parseSessionConfig loads topic, context, providers, and minds", () => {
   assert.equal(config.urgencyProvider, "deepseek");
   assert.equal(config.providers.openai.type, "openai");
   assert.equal(config.providers.deepseek.reasoningEffort, "max");
-  assert.equal(config.minds[0]?.personaPath, "agents/naval-perspective/SKILL.md");
-  assert.equal(config.disabledMinds?.[0]?.personaPath, "agents/feynman-perspective/SKILL.md");
+  assert.equal(config.minds[0]?.personaPath, "personas/naval-perspective/SKILL.md");
+  assert.equal(config.disabledMinds?.[0]?.personaPath, "personas/feynman-perspective/SKILL.md");
 });
 
 test("parseSessionConfig applies globalMindsProvider when a mind omits provider", () => {
@@ -59,10 +59,10 @@ test("parseSessionConfig applies globalMindsProvider when a mind omits provider"
     },
     minds: [
       {
-        personaPath: "agents/naval-perspective/SKILL.md",
+        personaPath: "personas/naval-perspective/SKILL.md",
       },
       {
-        personaPath: "agents/feynman-perspective/SKILL.md",
+        personaPath: "personas/feynman-perspective/SKILL.md",
         provider: "deepseek",
       },
     ],
@@ -88,7 +88,7 @@ test("parseSessionConfig accepts provider aliases and openrouter", () => {
     },
     minds: [
       {
-        personaPath: "agents/naval-perspective/SKILL.md",
+        personaPath: "personas/naval-perspective/SKILL.md",
       },
     ],
   });
@@ -101,7 +101,7 @@ test("parseSessionConfig accepts provider aliases and openrouter", () => {
 
 test("loadSessionConfig resolves mind identity from persona folder metadata", async () => {
   const configDir = await mkdtemp(join(tmpdir(), "persona-roundtable-config-"));
-  const personaDir = join(configDir, "agents", "naval");
+  const personaDir = join(configDir, "personas", "naval");
   await mkdir(personaDir, { recursive: true });
   await writeFile(join(personaDir, "SKILL.md"), "persona", "utf8");
   await writeFile(join(personaDir, "persona.json"), JSON.stringify({ id: "naval", name: "Naval" }), "utf8");
@@ -117,7 +117,7 @@ test("loadSessionConfig resolves mind identity from persona folder metadata", as
       },
       minds: [
         {
-          personaPath: "agents/naval/SKILL.md",
+          personaPath: "personas/naval/SKILL.md",
           provider: "openai",
         },
       ],
@@ -133,7 +133,7 @@ test("loadSessionConfig resolves mind identity from persona folder metadata", as
 
 test("loadSessionConfig loads Markdown context relative to the session config without changing line breaks", async () => {
   const configDir = await mkdtemp(join(tmpdir(), "persona-roundtable-context-"));
-  const personaDir = join(configDir, "agents", "naval");
+  const personaDir = join(configDir, "personas", "naval");
   await mkdir(personaDir, { recursive: true });
   await writeFile(join(personaDir, "SKILL.md"), "persona", "utf8");
   await writeFile(join(personaDir, "persona.json"), JSON.stringify({ id: "naval", name: "Naval" }), "utf8");
@@ -148,7 +148,7 @@ test("loadSessionConfig loads Markdown context relative to the session config wi
       providers: {
         openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
       },
-      minds: [{ personaPath: "agents/naval/SKILL.md", provider: "openai" }],
+      minds: [{ personaPath: "personas/naval/SKILL.md", provider: "openai" }],
     }),
     "utf8",
   );
@@ -168,7 +168,7 @@ test("parseSessionConfig defaults testMode to false", () => {
     },
     minds: [
       {
-        personaPath: "agents/naval-perspective/SKILL.md",
+        personaPath: "personas/naval-perspective/SKILL.md",
         provider: "openai",
       },
     ],
@@ -191,7 +191,7 @@ test("parseSessionConfig rejects missing maxRounds", () => {
         },
         minds: [
           {
-            personaPath: "agents/naval-perspective/SKILL.md",
+            personaPath: "personas/naval-perspective/SKILL.md",
             provider: "openai",
           },
         ],
@@ -214,7 +214,7 @@ test("parseSessionConfig rejects invalid maxRounds values", () => {
           },
           minds: [
             {
-              personaPath: "agents/naval-perspective/SKILL.md",
+              personaPath: "personas/naval-perspective/SKILL.md",
               provider: "openai",
             },
           ],
@@ -236,7 +236,7 @@ test("parseSessionConfig treats none compression provider as disabled", () => {
     },
     minds: [
       {
-        personaPath: "agents/naval-perspective/SKILL.md",
+        personaPath: "personas/naval-perspective/SKILL.md",
         provider: "openai",
       },
     ],
@@ -256,7 +256,7 @@ test("parseSessionConfig allows empty disabledMinds", () => {
     },
     minds: [
       {
-        personaPath: "agents/naval-perspective/SKILL.md",
+        personaPath: "personas/naval-perspective/SKILL.md",
         provider: "openai",
       },
     ],
@@ -388,9 +388,9 @@ test("parseSessionConfig accepts dynamic mode and maxTurns with at least three m
       openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
     },
     minds: [
-      { personaPath: "agents/a/SKILL.md", provider: "openai" },
-      { personaPath: "agents/b/SKILL.md", provider: "openai" },
-      { personaPath: "agents/c/SKILL.md", provider: "openai" },
+      { personaPath: "personas/a/SKILL.md", provider: "openai" },
+      { personaPath: "personas/b/SKILL.md", provider: "openai" },
+      { personaPath: "personas/c/SKILL.md", provider: "openai" },
     ],
   });
 
@@ -410,9 +410,9 @@ test("parseSessionConfig treats null maxTurns as the dynamic fallback", () => {
       openai: { type: "openai", model: "gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
     },
     minds: [
-      { personaPath: "agents/a/SKILL.md", provider: "openai" },
-      { personaPath: "agents/b/SKILL.md", provider: "openai" },
-      { personaPath: "agents/c/SKILL.md", provider: "openai" },
+      { personaPath: "personas/a/SKILL.md", provider: "openai" },
+      { personaPath: "personas/b/SKILL.md", provider: "openai" },
+      { personaPath: "personas/c/SKILL.md", provider: "openai" },
     ],
   });
 
@@ -436,8 +436,8 @@ test("parseSessionConfig rejects invalid dynamic mode settings", () => {
         ...base,
         discussionMode: "dynamic",
         minds: [
-          { personaPath: "agents/a/SKILL.md", provider: "openai" },
-          { personaPath: "agents/b/SKILL.md", provider: "openai" },
+          { personaPath: "personas/a/SKILL.md", provider: "openai" },
+          { personaPath: "personas/b/SKILL.md", provider: "openai" },
         ],
       }),
     /requires at least three active minds/,
@@ -450,9 +450,9 @@ test("parseSessionConfig rejects invalid dynamic mode settings", () => {
         discussionMode: "dynamic",
         maxTurns: 2,
         minds: [
-          { personaPath: "agents/a/SKILL.md", provider: "openai" },
-          { personaPath: "agents/b/SKILL.md", provider: "openai" },
-          { personaPath: "agents/c/SKILL.md", provider: "openai" },
+          { personaPath: "personas/a/SKILL.md", provider: "openai" },
+          { personaPath: "personas/b/SKILL.md", provider: "openai" },
+          { personaPath: "personas/c/SKILL.md", provider: "openai" },
         ],
       }),
     /must be at least the active mind count/,
@@ -465,9 +465,9 @@ test("parseSessionConfig rejects invalid dynamic mode settings", () => {
         discussionMode: "dynamic",
         maxTurns: 1.5,
         minds: [
-          { personaPath: "agents/a/SKILL.md", provider: "openai" },
-          { personaPath: "agents/b/SKILL.md", provider: "openai" },
-          { personaPath: "agents/c/SKILL.md", provider: "openai" },
+          { personaPath: "personas/a/SKILL.md", provider: "openai" },
+          { personaPath: "personas/b/SKILL.md", provider: "openai" },
+          { personaPath: "personas/c/SKILL.md", provider: "openai" },
         ],
       }),
     /maxTurns must be a positive integer/,
@@ -478,7 +478,7 @@ test("parseSessionConfig rejects invalid dynamic mode settings", () => {
       parseSessionConfig({
         ...base,
         discussionMode: "automatic",
-        minds: [{ personaPath: "agents/a/SKILL.md", provider: "openai" }],
+        minds: [{ personaPath: "personas/a/SKILL.md", provider: "openai" }],
       }),
     /discussionMode must be 'simple' or 'dynamic'/,
   );

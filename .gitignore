@@ -1,7 +1,7 @@
 node_modules/
 sessions/
 dev-logs/
-agents-archive/
+personas-archive/
 .env.local
 config.local.json
 run.sh
