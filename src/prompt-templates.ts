@@ -19,14 +19,14 @@ export interface PromptTemplateSet {
 }
 
 export const defaultPromptTemplates: PromptTemplateSet = {
-  roundOne: loadPromptTemplate("prompts/round1.md"),
-  followUpRound: loadPromptTemplate("prompts/follow-up-round.md"),
-  moderator: loadPromptTemplate("prompts/moderator.md"),
+  roundOne: loadPromptTemplate("prompts/shared-round1.md"),
+  followUpRound: loadPromptTemplate("prompts/simple-follow-up.md"),
+  moderator: loadPromptTemplate("prompts/simple-moderator.md"),
   dynamicTurn: loadPromptTemplate("prompts/dynamic-turn.md"),
-  urgency: loadPromptTemplate("prompts/urgency.md"),
-  dynamicModerator: loadPromptTemplate("prompts/dynamic-moderator.md"),
-  finalSummary: loadPromptTemplate("prompts/final-summary.md"),
-  compression: loadPromptTemplate("prompts/compression.md"),
+  urgency: loadPromptTemplate("prompts/dynamic-urgency.md"),
+  dynamicModerator: loadPromptTemplate("prompts/dynamic-moderator-check.md"),
+  finalSummary: loadPromptTemplate("prompts/shared-final-summary.md"),
+  compression: loadPromptTemplate("prompts/shared-compression.md"),
 };
 
 export function renderTemplate(template: PromptTemplate, variables: Record<string, string>): ChatMessage[] {

@@ -29,9 +29,9 @@ export function formatPhaseLabel(phase: SpeakerOutputPhase): string {
   if (roundMatch?.[1]) return `Round ${roundMatch[1]}`;
   const moderatorMatch = phase.match(/^moderator-review-(\d+)$/);
   if (moderatorMatch?.[1]) return `Moderator Review: Round ${moderatorMatch[1]}`;
-  const dynamicTurnMatch = phase.match(/^dynamic-turn-(d+)$/);
+  const dynamicTurnMatch = phase.match(/^dynamic-turn-(\d+)$/);
   if (dynamicTurnMatch?.[1]) return "Turn " + dynamicTurnMatch[1];
-  const moderatorCheckMatch = phase.match(/^moderator-check-(d+)$/);
+  const moderatorCheckMatch = phase.match(/^moderator-check-(\d+)$/);
   if (moderatorCheckMatch?.[1]) return "Moderator Check: Turn " + moderatorCheckMatch[1];
   if (phase === "final-summary") return "Moderator Final Summary";
   return phase;

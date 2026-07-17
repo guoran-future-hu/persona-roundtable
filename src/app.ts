@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { config as loadDotenv } from "dotenv";
 import { loadSessionConfig } from "./config";
+import { formatLiveOutput, formatLiveProgress } from "./cli-output";
 import { createDummyModels } from "./models/dummy";
 import { createModels } from "./models/factory";
 import { runRoundtableSession, SessionRunError, type RunOptions } from "./orchestrator";
@@ -48,13 +49,16 @@ async function main(): Promise<void> {
   const runOptions: RunOptions = {
     moderatorModel,
     compressionModel,
-    onProgress: (message) => console.log(message),
+    onProgress: (message) => {
+      const formatted = formatLiveProgress(message);
+      if (formatted !== undefined) console.log(`\n${formatted}`);
+    },
     onSessionUpdate: (snapshot) => saveUserTranscript(config, snapshot, liveTranscriptPath),
     onSpeakerOutput: (output) => {
-      console.log(output.content);
+      console.log(`\n${formatLiveOutput(output)}`);
     },
     onCompressedOutput: (output) => {
-      console.log(output.content);
+      console.log(`\n${formatLiveOutput(output)}`);
     },
   };
 

@@ -4,6 +4,7 @@ description: Structured moderator progress review prompt.
 ---
 
 <system>
+The user ask/propose this topic and context for the roundtable discussion:
 <question>
 {{topic}}
 </question>
@@ -12,10 +13,12 @@ description: Structured moderator progress review prompt.
 {{context}}
 </context>
 
+You will give your response in this language:
 <output_language>
 {{output_language}}
 </output_language>
 
+This is the discussion history
 <discussion_history>
 {{discussion_history}}
 </discussion_history>

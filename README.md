@@ -30,7 +30,7 @@
 
 <div align="center">
 
-<a href="#项目简介">📖 项目简介</a>　·　<a href="#项目是怎么工作的">🧭 工作原理</a>　·　<a href="#如何使用">🚀 如何使用</a>　·　<a href="#效果示例">✨ 效果示例</a>
+<a href="#项目简介">📖 项目简介</a>　·　<a href="#运行原理">🧭 运行原理</a>　·　<a href="#如何使用">🚀 如何使用</a>　·　<a href="#效果示例">✨ 效果示例</a>
 
 </div>
 
@@ -175,16 +175,16 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
 
 3. **准备配置文件**
 
-   把 `config.json` 复制成自己的配置文件，并按需修改主题、背景、人格、模型和讨论模式。仓库也提供 `config-cn.json` 和 `config-en.json` 两个语言版本。
+   中文讨论使用 `config-cn.json`，英文讨论使用 `config-en.json`。按需修改对应文件中的主题、背景、人格、模型和讨论模式。
 
 4. **运行讨论**
 
-   默认配置使用 DeepSeek：
+   请显式选择配置文件：
 
    ```bash
-   npm run roundtable
-   # 或显式指定配置
-   npm run roundtable -- --config config-custom.json
+   npm run roundtable -- --config config-cn.json
+   # 英文讨论
+   npm run roundtable -- --config config-en.json
    ```
 
 5. **使用测试模式（可选）**
@@ -192,7 +192,7 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
    不调用 API 时，加上 `--test-mode`：
 
    ```bash
-   npm run roundtable -- --config config.json --test-mode
+   npm run roundtable -- --config config-cn.json --test-mode
    ```
 
 6. **调试输出（可选）**
@@ -200,7 +200,7 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
    默认只保存完整 transcript。需要开发日志和发言统计时，加上 `--debug`（或 `--debug-mode`）：
 
    ```bash
-   npm run roundtable -- --config config.json --debug
+   npm run roundtable -- --config config-cn.json --debug
    ```
 
 7. **查看结果**
@@ -221,7 +221,7 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
 
 ### 配置说明
 
-根目录的 `config.json` 是默认讨论配置：
+`config-cn.json` 和 `config-en.json` 是仓库提供的讨论配置，请根据讨论语言显式选择：
 
 - `topic`：讨论的问题
 - `context`：相关背景和细节；可直接填写文字，也可填写相对于 config 文件的 `.md` 路径。运行时会读取 `.md` 作为上下文
@@ -268,7 +268,7 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
 
 对这个话题感兴趣？欢迎来看我的blog：
 
-[小红书](http://xhslink.com/o/9CCXWsADxr8) ｜ [公众号](https://mp.weixin.qq.com/s/5T4K93nJtKRXFmMIgu92ig) ｜ [英文版博客](https://guoran-future-hu.github.io/blogs/Causality/)
+[小红书](https://www.xiaohongshu.com/discovery/item/69bb803f000000001b003325?source=webshare&xhsshare=pc_web&xsec_token=ABnnzZBmsBf8S3h2zg98OgpF1H2PSVfpGVKpVGGAMgJmo=&xsec_source=pc_share) ｜ [公众号](https://mp.weixin.qq.com/s/5T4K93nJtKRXFmMIgu92ig) ｜ [英文版博客](https://guoran-future-hu.github.io/blogs/Causality/)
 
 我经常会跟AI聊很抽象的东西，现在有一些问题我更爱跟这个圆桌聊了
 
@@ -278,7 +278,7 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
 
 - `buffett` 卡片来自 [Panmax/buffett-skill](https://github.com/Panmax/buffett-skill)，`dalio` 卡片来自 [Panmax/dalio-skill](https://github.com/Panmax/dalio-skill)；两者均使用了 Nuwa 生态。
 - `mao` 卡片来自 [leezythu/maoxuan-skill](https://github.com/leezythu/maoxuan-skill)，并保留了其对 [MaoZeDongAnthology](https://github.com/weiyinfu/MaoZeDongAnthology) 和 [tong-jincheng-skill](https://github.com/hotcoffeeshake/tong-jincheng-skill) 的相关致谢。
-- `sun` 卡片来自 [0xquqi/sun-skill](https://github.com/0xquqi/sun-skill)，并使用了公开材料。
+- `justin-sun` 卡片来自 [0xquqi/sun-skill](https://github.com/0xquqi/sun-skill)，并使用了公开材料。
 
 ## License
 

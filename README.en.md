@@ -10,7 +10,7 @@
 
 <img src="./hero-image.png" alt="Persona Roundtable" width="70%">
 
-### [🇨🇳 中文版 →](README.md)
+### [CN 中文版 →](README.md)
 
 </div>
 
@@ -126,6 +126,39 @@ Dalio     ❯ They also need redundancy, transparent metrics, and independent ov
 Moderator ❯ Complexity is not the problem; missing feedback and correction turns efficiency into fragility.
 ```
 
+---
+
+### Example 3: Open-source independence and institutional support (dynamic mode)
+
+**Question: An open-source local AI roundtable already has hundreds of developers and a volunteer community. Should it accept support from a large company that wants influence over its roadmap and governance?**
+
+```text
+Round 1
+Paul Graham ❯ Do not treat the community and the institution as mutually exclusive. Before accepting resources, test whether users will support the project; once dependent on a sponsor, the roadmap will gradually bend toward its needs.
+Elon Musk   ❯ Accept the resources, but never surrender control: create an independent foundation, give the community a board majority, let the foundation assign engineers, and put an exit mechanism in the contract.
+Steve Jobs  ❯ The real question is who decides what the product is. If “professional user features” damage the experience, the sponsorship is a prelude to an acquisition. Better to refuse than lose the product's soul.
+Moderator   ❯ All three treat control as a red line, but they fundamentally disagree on whether governance can resist sponsor influence.
+
+Urgency vote
+Paul Graham: minor update · Elon Musk: strong need to respond
+→ Next speaker: Elon Musk (selected by response urgency)
+
+Elon Musk   ❯ Organic growth alone is too idealistic. Without stable infrastructure, growth stops; set boundaries now and accept resources. Paul, can pure enthusiasm pay the server bills?
+Invitation: Paul Graham
+
+Paul Graham ❯ When resources are extremely asymmetric, money changes daily priorities like gravity. The foundation may be decoration. First run a user-payment experiment; if the company truly wants to help, it should accept no special status and no control over the roadmap.
+Invitation: Steve Jobs
+
+Steve Jobs  ❯ You cannot please volunteers and sponsors while keeping your soul. Contract terms cannot stop daily compromises; focus on making something users willingly support and reject the money.
+
+Urgency vote
+Paul Graham: minor update · Elon Musk: strong need to respond
+→ Next speaker: Elon Musk (selected by response urgency)
+
+Elon Musk   ❯ Refusing support does not guarantee independence; it may just mean waiting to die. Accept resources and lock control into the foundation. If the sponsor rejects those boundaries, refuse the deal. Do not hover in the middle.
+Moderator   ❯ The discussion has converged on three executable paths: refuse and rely on users, accept under strict foundation conditions, or first test user payments and sponsor intent. The core positions have been fully challenged.
+```
+
 ## Usage
 
 **Short version: let your AI agent help you run it.**
@@ -146,16 +179,16 @@ Moderator ❯ Complexity is not the problem; missing feedback and correction tur
 
 3. **Prepare a config**
 
-   Copy `config.json`, then edit the topic, context, minds, providers, and discussion mode. The repository also includes `config-cn.json` and `config-en.json` language variants.
+   Use `config-cn.json` for Chinese discussions and `config-en.json` for English discussions. Edit the selected file's topic, context, minds, providers, and discussion mode as needed.
 
 4. **Run a discussion**
 
-   The default config uses DeepSeek:
+   Choose a config explicitly:
 
    ```bash
-   npm run roundtable
-   # or choose a config explicitly
-   npm run roundtable -- --config config-custom.json
+   npm run roundtable -- --config config-cn.json
+   # English discussion
+   npm run roundtable -- --config config-en.json
    ```
 
 5. **Run without an API for testing (optional)**
@@ -163,7 +196,7 @@ Moderator ❯ Complexity is not the problem; missing feedback and correction tur
    Add `--test-mode`:
 
    ```bash
-   npm run roundtable -- --config config.json --test-mode
+   npm run roundtable -- --config config-en.json --test-mode
    ```
 
 6. **Enable debug output (optional)**
@@ -171,7 +204,7 @@ Moderator ❯ Complexity is not the problem; missing feedback and correction tur
    By default, only the full transcript is saved. Add `--debug` (or `--debug-mode`) to save the development log and speaker-count report:
 
    ```bash
-   npm run roundtable -- --config config.json --debug
+   npm run roundtable -- --config config-en.json --debug
    ```
 
 7. **Find the result**
@@ -192,7 +225,7 @@ All four parts below make model calls:
 
 ### Configuration
 
-The root `config.json` is the default discussion:
+`config-cn.json` and `config-en.json` are the repository's discussion configurations. Choose one explicitly based on the discussion language:
 
 - `topic`: the question to discuss
 - `context`: background and constraints; use inline text or a `.md` path relative to the config. The whole file is provided as context.
@@ -202,8 +235,8 @@ The root `config.json` is the default discussion:
 - `compressionEnabled`: whether to enable live CLI compression; defaults to `true`, and `false` shows raw outputs
 - `compressionProvider`, `urgencyProvider`: use lightweight models
 - `discussionMode`: `simple` or `dynamic`; dynamic requires at least three minds
-- `maxRounds`: maximum rounds in `simple` mode
-- `maxTurns`: maximum speaker turns in `dynamic` mode; if omitted, defaults to `maxRounds × active minds`
+- `maxRounds`: maximum rounds in `simple` mode. Avoid setting it too high: long histories can reduce the model's attention to the current discussion.
+- `maxTurns`: maximum speaker turns in `dynamic` mode; if omitted, defaults to `maxRounds × active minds`, and it cannot be lower than the number of active minds. Avoid setting it too high for the same reason.
 
 Provider profiles contain the model and environment variable name:
 
@@ -227,27 +260,29 @@ Provider profiles contain the model and environment variable name:
 
 ## The idea behind the project
 
-Success stories often describe only a few factors from a few angles. Context is lost in communication—or the storyteller never saw it clearly. A strategy that works in one background, environment, or era may fail in another.
+Success stories often describe only a few factors from a few angles. Context is lost in communication—or the storyteller never saw it at all. A strategy that works in one background, environment, or era may fail in another.
 
 But this limitation is not unique to success stories. We fall into it whenever we try to understand anything.
 
 The world is a huge complex system. Any single perspective is incomplete.
 
-By paying attention, we can trace the patterns behind events, notice perspectives we would normally miss, and build a better understanding of the whole.
+By looking closer, we can trace the patterns behind events, notice perspectives we would normally miss, and build a better understanding of the whole.
 
-This project is less a thinking tool than a concrete form of my philosophy and narrative.
+This project is less of a thinking tool than a concrete form of my philosophy and narrative.
 
-Interested in the idea? Visit my [blog](https://guoran-future-hu.github.io/blogs/Causality/).
+Interested in the idea? Visit:
 
-I often discuss abstract ideas with AI. These days, there are some questions I would rather bring to this roundtable.
+[RedNote](https://www.xiaohongshu.com/discovery/item/69bb803f000000001b003325?source=webshare&xhsshare=pc_web&xsec_token=ABnnzZBmsBf8S3h2zg98OgpF1H2PSVfpGVKpVGGAMgJmo=&xsec_source=pc_share) ｜ [WeChat](https://mp.weixin.qq.com/s/5T4K93nJtKRXFmMIgu92ig) ｜ [English blog](https://guoran-future-hu.github.io/blogs/Causality/)
+
+I often discuss abstract ideas with AI. I found myself bringing more questions to this roundtable recently.
 
 ## Acknowledgement
 
 This project builds heavily on the work of [Huashu](https://github.com/alchaincyf). Most persona cards come from or are based on his [Nuwa Skill](https://github.com/alchaincyf/nuwa-skill/tree/main).
 
-- `buffett` and `dalio` come from [Panmax/buffett-skill](https://github.com/Panmax/buffett-skill) and [Panmax/dalio-skill](https://github.com/Panmax/dalio-skill).
-- `mao` comes from [leezythu/maoxuan-skill](https://github.com/leezythu/maoxuan-skill), with its acknowledgements preserved.
-- `sun` comes from [0xquqi/sun-skill](https://github.com/0xquqi/sun-skill).
+- The `buffett` card comes from [Panmax/buffett-skill](https://github.com/Panmax/buffett-skill), and the `dalio` card comes from [Panmax/dalio-skill](https://github.com/Panmax/dalio-skill); both use the Nuwa ecosystem.
+- The `mao` card comes from [leezythu/maoxuan-skill](https://github.com/leezythu/maoxuan-skill), with its acknowledgements to [MaoZeDongAnthology](https://github.com/weiyinfu/MaoZeDongAnthology) and [tong-jincheng-skill](https://github.com/hotcoffeeshake/tong-jincheng-skill) preserved.
+- The `justin-sun` card comes from [0xquqi/sun-skill](https://github.com/0xquqi/sun-skill) and uses public materials.
 
 ## License
 

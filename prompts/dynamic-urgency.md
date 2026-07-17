@@ -4,6 +4,7 @@ description: Short structured speaking-urgency assessment.
 ---
 
 <system>
+The user ask/propose this topic and context for the roundtable discussion:
 <question>
 {{topic}}
 </question>
@@ -12,6 +13,7 @@ description: Short structured speaking-urgency assessment.
 {{context}}
 </context>
 
+This is the discussion history
 <discussion_history>
 {{discussion_history}}
 </discussion_history>
@@ -25,6 +27,7 @@ Active participants in this discussion session:
 {{persona}}
 </persona_card>
 
+You will give your response in this language:
 <output_language>
 {{output_language}}
 </output_language>

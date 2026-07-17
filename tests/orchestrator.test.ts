@@ -524,12 +524,21 @@ test("dynamic mode polls urgency before moderator checks and preserves invitatio
     makeMind("gamma", "Gamma", gammaModel),
   ];
 
-  const result = await runRoundtableSession(dynamicConfig, minds, { moderatorModel, compressionModel, urgencyModel });
+  const progress: string[] = [];
+  const result = await runRoundtableSession(dynamicConfig, minds, {
+    moderatorModel,
+    compressionModel,
+    urgencyModel,
+    onProgress: (message) => progress.push(message),
+  });
 
   assert.equal(result.discussionMode, "dynamic");
   assert.equal(result.effectiveMaxTurns, 8);
   assert.deepEqual(result.rounds[0]?.outputs.map((output) => output.mindName), ["Alpha", "Beta", "Gamma"]);
   assert.equal(result.urgencyPolls.length, 2);
+  assert.ok(progress.includes("Urgency after turn 3 · Alpha=strong · Beta=minor → next: Alpha"));
+  assert.ok(progress.includes("[Alpha] invites [Beta] as follow-up speaker"));
+  assert.ok(progress.every((message) => !message.startsWith("Moderator check:")));
   assert.deepEqual(
     result.urgencyPolls[0]?.signals.map((signal) => [signal.mindId, signal.urgency]),
     [

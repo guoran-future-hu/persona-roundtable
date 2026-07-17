@@ -6,6 +6,7 @@ description: Live monitoring compression prompt.
 <system>
 Compress this segment of conversation. Preserve the speaker's stance, key reasons, caveats, and any update in view.
 
+You will give your response in this language:
 <output_language>
 {{output_language}}
 </output_language>

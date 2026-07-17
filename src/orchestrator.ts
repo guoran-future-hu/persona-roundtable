@@ -441,6 +441,7 @@ async function runDynamicRoundtableSession(
       // This lets a mind with a strong need to respond keep a live disagreement going.
       if (response.inviteMindId !== null) {
         const invitedMind = minds.find((mind) => mind.id === response.inviteMindId)!;
+        options.onProgress?.(`[${selection.mind.name}] invites [${invitedMind.name}] as follow-up speaker`);
         nextSelection = {
           mind: invitedMind,
           method: "invitation",
@@ -465,7 +466,6 @@ async function runDynamicRoundtableSession(
         });
       }
 
-      options.onProgress?.("Moderator check: Turn " + turnNumber);
       const moderatorMessages = buildDynamicModeratorMessages(
         config.topic,
         context,

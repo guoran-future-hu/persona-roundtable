@@ -48,7 +48,6 @@ export async function selectNextByUrgency({
   options: RunOptions;
 }): Promise<NextSpeakerSelection | undefined> {
   const eligibleMinds = minds.filter((mind) => mind.id !== previousMindId);
-  options.onProgress?.("Urgency poll after turn " + afterTurnNumber);
   const templates = promptTemplates ?? defaultPromptTemplates;
 
   const signalResults = await Promise.allSettled(
@@ -96,6 +95,9 @@ export async function selectNextByUrgency({
   const leastHeardSignals = highestUrgencySignals.filter((signal) => (speechCounts.get(signal.mindId) ?? 0) === fewestSpeeches);
   const selectedSignal = leastHeardSignals[Math.floor(Math.random() * leastHeardSignals.length)];
   urgencyPolls.push({ afterTurnNumber, signals, selectedMindId: selectedSignal?.mindId });
+  options.onProgress?.(
+    `Urgency after turn ${afterTurnNumber} · ${signals.map((signal) => `${signal.mindName}=${formatUrgency(signal.urgency)}`).join(" · ")} → ${selectedSignal ? `next: ${selectedSignal.mindName}` : "no next speaker"}`,
+  );
 
   if (!selectedSignal) return undefined;
   return {
@@ -117,4 +119,10 @@ function countMindSpeeches(rounds: RoundResult[]): Map<string, number> {
 
 function urgencyPhase(turnNumber: number): `urgency-after-turn-${number}` {
   return `urgency-after-turn-${turnNumber}`;
+}
+
+function formatUrgency(urgency: UrgencySignal["urgency"]): string {
+  if (urgency === "no_new_comment") return "none";
+  if (urgency === "minor_update") return "minor";
+  return "strong";
 }

@@ -4,6 +4,7 @@ description: Adaptive post-speech moderator decision and optional checkpoint sum
 ---
 
 <system>
+The user ask/propose this topic and context for the roundtable discussion:
 <question>
 {{topic}}
 </question>
@@ -12,10 +13,12 @@ description: Adaptive post-speech moderator decision and optional checkpoint sum
 {{context}}
 </context>
 
+You will give your response in this language:
 <output_language>
 {{output_language}}
 </output_language>
 
+This is the discussion history
 <discussion_history>
 {{discussion_history}}
 </discussion_history>
