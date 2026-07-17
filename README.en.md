@@ -177,11 +177,15 @@ Moderator   ❯ The discussion has converged on three executable paths: refuse a
 
    Add the key for your provider to `.env`.
 
-3. **Prepare a config**
+3. **Use a built-in or custom persona**
+
+   The repository includes 15 built-in personas, but does not have the distillation feature. Each persona directory currently uses a single `SKILL.md` file as its persona definition. You can add your own persona to `./personas` and reference it from `minds` in the selected config.
+
+4. **Prepare a config**
 
    Use `config-cn.json` for Chinese discussions and `config-en.json` for English discussions. Edit the selected file's topic, context, minds, providers, and discussion mode as needed.
 
-4. **Run a discussion**
+5. **Run a discussion**
 
    Choose a config explicitly:
 
@@ -191,7 +195,7 @@ Moderator   ❯ The discussion has converged on three executable paths: refuse a
    npm run roundtable -- --config config-en.json
    ```
 
-5. **Run without an API for testing (optional)**
+6. **Run without an API for testing (optional)**
 
    Add `--test-mode`:
 
@@ -199,7 +203,7 @@ Moderator   ❯ The discussion has converged on three executable paths: refuse a
    npm run roundtable -- --config config-en.json --test-mode
    ```
 
-6. **Enable debug output (optional)**
+7. **Enable debug output (optional)**
 
    By default, only the full transcript is saved. Add `--debug` (or `--debug-mode`) to save the development log and speaker-count report:
 
@@ -207,7 +211,7 @@ Moderator   ❯ The discussion has converged on three executable paths: refuse a
    npm run roundtable -- --config config-en.json --debug
    ```
 
-7. **Find the result**
+8. **Find the result**
 
    Sessions are saved under `sessions/`. The `test-configs/` directory contains ready-to-reference topics and invited minds.
 

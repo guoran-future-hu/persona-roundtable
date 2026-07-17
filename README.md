@@ -173,11 +173,15 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
 
    将要使用的 API key 填入 `.env`。
 
-3. **准备配置文件**
+3. **使用内置或自定义 persona**
+
+   项目内置 15 个人格，但没有额外的蒸馏功能。当前每个人格目录使用一个 `SKILL.md` 文件。你可以将自己喜欢的人格添加到 `./personas`，并在配置文件的 `minds` 中引用。
+
+4. **准备配置文件**
 
    中文讨论使用 `config-cn.json`，英文讨论使用 `config-en.json`。按需修改对应文件中的主题、背景、人格、模型和讨论模式。
 
-4. **运行讨论**
+5. **运行讨论**
 
    请显式选择配置文件：
 
@@ -187,7 +191,7 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
    npm run roundtable -- --config config-en.json
    ```
 
-5. **使用测试模式（可选）**
+6. **使用测试模式（可选）**
 
    不调用 API 时，加上 `--test-mode`：
 
@@ -195,7 +199,7 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
    npm run roundtable -- --config config-cn.json --test-mode
    ```
 
-6. **调试输出（可选）**
+7. **调试输出（可选）**
 
    默认只保存完整 transcript。需要开发日志和发言统计时，加上 `--debug`（或 `--debug-mode`）：
 
@@ -203,7 +207,7 @@ Paul Graham: 简要补充 · 马斯克: 强烈发言意愿
    npm run roundtable -- --config config-cn.json --debug
    ```
 
-7. **查看结果**
+8. **查看结果**
 
    讨论记录会保存到 `sessions/`。`test-configs/` 提供了一些可参考的讨论主题和参与人格。
 
