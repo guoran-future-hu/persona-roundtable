@@ -8,7 +8,7 @@
 [![Runtime: TypeScript](https://img.shields.io/badge/runtime-TypeScript-3178C6.svg)](#usage)
 ![Supported Providers](https://img.shields.io/badge/providers-OpenAI%20%7C%20Claude%20%7C%20DeepSeek%20%7C%20OpenRouter-5B5BD6)
 
-<img src="./hero-image.png" alt="Persona Roundtable" width="70%">
+<img src="./hero-image.png" alt="Persona Roundtable" width="100%">
 
 ### [CN 中文版 →](README.md)
 
