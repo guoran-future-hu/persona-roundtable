@@ -105,30 +105,7 @@ Karpathy  ❯ Instead of a binary label, observe online objectives and self-pres
 Moderator ❯ Current AI is not conscious. Watch autonomy, online learning, and self-maintenance while avoiding projection.
 ```
 
-### Example 2: Complex systems and social cycles
-
-**Question: Why can an increasingly efficient society become more fragile?**
-
-```text
-Round 1
-Mao       ❯ Higher productivity does not guarantee broad benefits. Concentrated resources and power accumulate social tension.
-Dalio     ❯ Debt, wealth gaps, and external competition can make a system fragile even at peak efficiency.
-Moderator ❯ Both point to the same risk: growth outpaces the system's ability to correct itself.
-
-Round 2
-Mao       ❯ Cycles are not destiny. Feed local experience into decisions and adjust distribution and institutions.
-Dalio     ❯ Make feedback structural: publish data, run adversarial reviews, and stress-test the system.
-Moderator ❯ The disagreement shifts from who drives change to how feedback is embedded.
-
-Round 3
-Mao       ❯ Institutions should remain responsive and preserve room for participation and correction.
-Dalio     ❯ They also need redundancy, transparent metrics, and independent oversight across generations.
-Moderator ❯ Complexity is not the problem; missing feedback and correction turns efficiency into fragility.
-```
-
----
-
-### Example 3: Open-source independence and institutional support (dynamic mode)
+### Example 2: Open-source independence and institutional support (dynamic mode)
 
 **Question: An open-source local AI roundtable already has hundreds of developers and a volunteer community. Should it accept support from a large company that wants influence over its roadmap and governance?**
 
